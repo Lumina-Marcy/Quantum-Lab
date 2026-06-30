@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Home from './pages/Home';
 import Mission from './pages/Mission';
+import PasswordMission from './pages/PasswordMission';
 import Sandbox from './pages/Sandbox';
 import NotFound from './pages/NotFound';
 
@@ -10,6 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/mission/:id" element={<Mission />} />
+        <Route path="/mission/1/play" element={<PasswordMission />} />
         <Route path="/sandbox" element={<Sandbox />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
