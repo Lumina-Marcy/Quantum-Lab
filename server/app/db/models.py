@@ -14,6 +14,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    username_changed_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
 class Mission(Base):
     __tablename__ = 'missions'
