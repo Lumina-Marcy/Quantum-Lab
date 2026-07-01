@@ -61,6 +61,7 @@ class LoginRequest(BaseModel):
 class PatchAccountRequest(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
+    email: Optional[EmailStr] = None
 
     @field_validator("username")
     @classmethod
@@ -85,6 +86,7 @@ class UserResponse(BaseModel):
     last_name: str
     username: str
     email: str
+    username_changed_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -218,11 +220,19 @@ def patch_account(
     current_user: User = Depends(_get_current_user),
     db: Session = Depends(get_db),
 ):
-    if payload.username is None and payload.password is None:
+    if payload.username is None and payload.password is None and payload.email is None:
         raise HTTPException(status_code=422, detail="Provide at least one field to update")
 
     try:
         if payload.username is not None:
+            if current_user.username_changed_at:
+                days_since = (datetime.now(timezone.utc) - current_user.username_changed_at).days
+                if days_since < 30:
+                    days_left = 30 - days_since
+                    raise HTTPException(
+                        status_code=429,
+                        detail=f"Username can only be changed once per month. {days_left} day{'s' if days_left != 1 else ''} remaining."
+                    )
             taken = db.query(User).filter(
                 User.username == payload.username,
                 User.user_id != current_user.user_id,
@@ -230,9 +240,19 @@ def patch_account(
             if taken:
                 raise HTTPException(status_code=409, detail="That username is already taken")
             current_user.username = payload.username
+            current_user.username_changed_at = datetime.now(timezone.utc)
 
         if payload.password is not None:
             current_user.password_hash = _hash_password(payload.password)
+
+        if payload.email is not None:
+            taken = db.query(User).filter(
+                User.email == payload.email,
+                User.user_id != current_user.user_id,
+            ).first()
+            if taken:
+                raise HTTPException(status_code=409, detail="That email is already in use")
+            current_user.email = payload.email
 
         db.commit()
         db.refresh(current_user)
