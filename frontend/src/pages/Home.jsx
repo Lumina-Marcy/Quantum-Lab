@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import SectionCard from '../components/SectionCard';
+import { useAuth } from '../context/AuthContext';
 
 const missions = [
   { id: '1', title: 'Password Vault', description: 'Learn how encryption works and why quantum computing challenges current security systems.' },
@@ -10,6 +11,7 @@ const missions = [
 ];
 
 function Home() {
+  const { user } = useAuth();
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <section className="space-y-6 text-center">
@@ -19,6 +21,22 @@ function Home() {
         <p className="mx-auto max-w-3xl text-lg leading-8 text-slate-300">
           Experience the future of problem solving with interactive missions that show how quantum and classical computers think differently.
         </p>
+        {!user && (
+          <div className="flex items-center justify-center gap-4 pt-2">
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-full bg-cyan-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center rounded-full border border-slate-600 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:border-slate-400 hover:text-white"
+            >
+              Create account
+            </Link>
+          </div>
+        )}
       </section>
 
       <section className="mt-12 grid gap-6 lg:grid-cols-2">
