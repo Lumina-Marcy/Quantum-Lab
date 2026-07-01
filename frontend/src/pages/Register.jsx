@@ -35,7 +35,11 @@ function Register() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || 'Registration failed');
+        const detail = data.detail;
+        const message = Array.isArray(detail)
+          ? detail.map((d) => d.msg).join(', ')
+          : detail;
+        setError(message || 'Registration failed');
         return;
       }
       const loginRes = await fetch('/api/auth/login', {
@@ -132,6 +136,7 @@ function Register() {
               value={form.password}
               onChange={handleChange}
               required
+              minLength={8}
               placeholder="at least 8 characters"
               className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-slate-100 placeholder-slate-500 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
             />

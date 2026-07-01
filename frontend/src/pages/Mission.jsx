@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const missionData = {
   1: {
@@ -22,44 +23,21 @@ const missionData = {
 };
 
 function UserDataForm({ profile, setProfile }) {
+  const { user } = useAuth();
   const [form, setForm] = useState({ username: '', email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    setError('');
   }
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (res.status === 409) {
-        setError('That username or email is already in use. Try a different one.');
-      } else if (!res.ok) {
-        setError('Something went wrong. Please try again.');
-      } else {
-        setProfile({ ...data, passwordLength: form.password.length });
-      }
-    } catch {
-      setError('Could not reach the server. Make sure the backend is running.');
-    } finally {
-      setLoading(false);
-    }
+    setProfile({ username: form.username, email: form.email, passwordLength: form.password.length });
   }
 
   function handleReset() {
     setProfile(null);
     setForm({ username: '', email: '', password: '' });
-    setError('');
   }
 
   return (
@@ -72,10 +50,20 @@ function UserDataForm({ profile, setProfile }) {
       <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Your Data</p>
       <h2 className="mt-2 text-2xl font-semibold text-white">What's at Stake</h2>
       <p className="mt-2 text-slate-400">
-        Enter sample personal information below. This data will be saved to the simulation database and used throughout the mission to make the cybersecurity risks feel real and personal.
+        Enter sample personal information below. This data will be used throughout the mission to make the cybersecurity risks feel real and personal.
       </p>
 
-      {profile ? (
+      {!user ? (
+        <div className="mt-6 rounded-2xl bg-slate-950/70 p-5">
+          <p className="text-sm text-slate-400">
+            Please{' '}
+            <Link to="/login" className="text-cyan-400 hover:text-cyan-300">
+              log in
+            </Link>{' '}
+            to continue this mission.
+          </p>
+        </div>
+      ) : profile ? (
         <div className="mt-6 space-y-3">
           <div className="rounded-2xl bg-slate-950/70 p-5 space-y-2">
             <div className="flex justify-between text-sm">
@@ -133,13 +121,12 @@ function UserDataForm({ profile, setProfile }) {
               className="w-full rounded-xl bg-slate-950/70 border border-slate-700 px-4 py-3 text-white placeholder-slate-600 focus:border-cyan-500 focus:outline-none"
             />
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
-            disabled={!form.username || !form.email || !form.password || loading}
+            disabled={!form.username || !form.email || !form.password}
             className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400 disabled:opacity-40"
           >
-            {loading ? 'Saving...' : 'Lock In My Data'}
+            Lock In My Data
           </button>
         </form>
       )}
