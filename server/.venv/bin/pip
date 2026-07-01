@@ -1,4 +1,4 @@
-#!/home/ager/Development/capstone/Quantum-Lab/server/.venv/bin/python3
+#!/home/tylek/development/capstone/Quantum-Lab/server/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

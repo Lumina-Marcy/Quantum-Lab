@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import SectionCard from '../components/SectionCard';
+import SignUpForm from '../components/SignUpForm';
 
 const missions = [
   { id: '1', title: 'Password Vault', description: 'Learn how encryption works and why quantum computing challenges current security systems.' },
@@ -47,6 +48,8 @@ function Home() {
           </Link>
         </div>
       </section>
+
+      <SignUpForm />
     </main>
   );
 }
