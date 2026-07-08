@@ -213,13 +213,11 @@ function PasswordMission() {
 
     const lastDelay = lines[lines.length - 1].delay;
 
-    const t1 = setTimeout(() => setPhase('breached'),  lastDelay + 800);
-    const t2 = setTimeout(() => setPhase('defending'), lastDelay + 2800);
+    const t1 = setTimeout(() => setPhase('breached'), lastDelay + 800);
 
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(t1);
-      clearTimeout(t2);
     };
   }, []);
 
@@ -321,6 +319,21 @@ function PasswordMission() {
                         <p className="text-slate-500 mb-1">Password</p>
                         <p className="text-red-300 font-bold">CRACKED</p>
                       </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                      <Link
+                        to="/mission/1/learn-why"
+                        className="rounded-full bg-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:bg-purple-400"
+                      >
+                        Learn Why →
+                      </Link>
+                      <button
+                        onClick={() => setPhase('defending')}
+                        className="rounded-full border border-slate-600 px-5 py-2.5 text-sm text-slate-300 transition hover:border-slate-400 hover:text-white"
+                      >
+                        See Defense Options
+                      </button>
                     </div>
                   </motion.div>
                 )}
