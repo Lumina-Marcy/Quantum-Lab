@@ -32,7 +32,12 @@ function UserDataForm({ profile, setProfile }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    setProfile({ username: form.username, email: form.email, passwordLength: form.password.length });
+    setProfile({
+      username: form.username,
+      email: form.email,
+      passwordLength: form.password.length,
+      password: form.password,
+    });
   }
 
   function handleReset() {
