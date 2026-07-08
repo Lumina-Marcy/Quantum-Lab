@@ -1,78 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const COMMON_PASSWORDS = new Set([
-  'password', 'password1', 'passw0rd', '123456', '12345678', '123456789', '1234567890',
-  'qwerty', 'qwerty123', 'abc123', '111111', '123123', 'letmein', 'welcome', 'monkey',
-  'dragon', 'iloveyou', 'admin', 'trustno1', 'sunshine', 'princess', 'football',
-  'baseball', 'master', 'superman', 'starwars', 'whatever', 'qazwsx', 'shadow',
-  'michael', 'jennifer', '000000', '123321', 'freedom', 'whatever1',
-]);
-
-const KEYBOARD_SEQUENCES = ['abcdefghijklmnopqrstuvwxyz', '0123456789', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
-
-function hasSequentialRun(lower, minRun = 4) {
-  for (const seq of KEYBOARD_SEQUENCES) {
-    for (let i = 0; i <= seq.length - minRun; i++) {
-      const forward = seq.slice(i, i + minRun);
-      const backward = [...forward].reverse().join('');
-      if (lower.includes(forward) || lower.includes(backward)) return true;
-    }
-  }
-  return false;
-}
-
-function hasRepeatedRun(str, minRun = 3) {
-  return new RegExp(`(.)\\1{${minRun - 1},}`).test(str);
-}
-
-// Rule-based read on the player's real password: how large its keyspace is (entropy) and
-// whether it's the kind of predictable pattern Grover's speedup chews through instantly.
-function evaluatePassword(password, username, email) {
-  const length = password.length;
-  const lower = password.toLowerCase();
-  const hasLower = /[a-z]/.test(password);
-  const hasUpper = /[A-Z]/.test(password);
-  const hasDigit = /[0-9]/.test(password);
-  const hasSymbol = /[^a-zA-Z0-9]/.test(password);
-  const categoryCount = [hasLower, hasUpper, hasDigit, hasSymbol].filter(Boolean).length;
-
-  let poolSize = 0;
-  if (hasLower) poolSize += 26;
-  if (hasUpper) poolSize += 26;
-  if (hasDigit) poolSize += 10;
-  if (hasSymbol) poolSize += 32;
-  poolSize = poolSize || 26;
-
-  const entropyBits = Math.round(length * Math.log2(poolSize));
-  const effectiveBits = Math.round(entropyBits / 2);
-
-  const emailLocal = (email.split('@')[0] || '').toLowerCase();
-  const reasons = [];
-
-  const isCommon = COMMON_PASSWORDS.has(lower);
-  if (isCommon) reasons.push('it matches a known top-breached password list');
-
-  const containsIdentity =
-    (username && username.length > 2 && lower.includes(username.toLowerCase())) ||
-    (emailLocal.length > 2 && lower.includes(emailLocal));
-  if (containsIdentity) reasons.push('it contains your username or email');
-
-  const sequential = hasSequentialRun(lower);
-  if (sequential) reasons.push('it contains a keyboard or alphabetic/numeric sequence');
-
-  const repeated = hasRepeatedRun(password);
-  if (repeated) reasons.push('it repeats the same character too many times in a row');
-
-  if (length < 12) reasons.push('it is shorter than 12 characters');
-  if (categoryCount < 3) reasons.push('it uses fewer than 3 character types (lowercase, uppercase, digits, symbols)');
-
-  const predictable = isCommon || containsIdentity || sequential || repeated;
-  const quantumResistant = !predictable && length >= 12 && categoryCount >= 3;
-
-  return { length, entropyBits, effectiveBits, poolSize, categoryCount, predictable, quantumResistant, reasons };
-}
+import { evaluatePassword } from '../utils/passwordStrength';
 
 const buildBreachLines = (username, email, assessment) => [
   {
@@ -160,62 +89,137 @@ const DEFENSE_OPTIONS = [
   },
 ];
 
+// Each layer still has to survive its OWN attack after it blocks the quantum one —
+// stacking defenses only helps if every layer you actually deploy is used correctly.
 const CONSEQUENCES = {
   twofa: {
-    verdict: 'VAULT SECURED',
-    concept: "Grover's Algorithm can't search a factor it was never given",
     lines: [
       { id: 1, delay: 400, text: '> Re-running Grover\'s Algorithm with recovered password hash...', cls: 'text-green-400' },
       { id: 2, delay: 1600, text: '> Password accepted — proceeding to second factor...', cls: 'text-yellow-300' },
       { id: 3, delay: 2900, text: '> One-time code requested from authenticator device...', cls: 'text-green-400' },
       { id: 4, delay: 4200, text: '> No physical device in attacker\'s possession — code unknown', cls: 'text-orange-400' },
       { id: 5, delay: 5400, text: '> Quantum speedup cannot brute-force a code that changes every 30 seconds off-network', cls: 'text-orange-400' },
-      { id: 6, delay: 6600, text: '█████████ ACCESS DENIED — SECOND FACTOR REQUIRED █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
+      { id: 6, delay: 6600, text: '█████████ QUANTUM VECTOR BLOCKED — SWITCHING TACTICS █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
     ],
-    explanation:
-      "Grover's algorithm sped up the search through your password's keyspace, and it still cracked the hash. But 2FA doesn't try to out-math the quantum computer — it moves the real secret off the wire entirely. The one-time code lives on your physical device and is never transmitted as something a computer, quantum or classical, could intercept and search. Cracking your password no longer means cracking your account.",
   },
   biometric: {
-    verdict: 'VAULT SECURED',
-    concept: 'No password hash means no search space to accelerate',
     lines: [
       { id: 1, delay: 400, text: '> Re-running Grover\'s Algorithm to search password states...', cls: 'text-green-400' },
       { id: 2, delay: 1600, text: '> Scanning login endpoint for a password hash to target...', cls: 'text-green-400' },
       { id: 3, delay: 2900, text: '> No password hash found — authentication is not secret-based', cls: 'text-yellow-300' },
       { id: 4, delay: 4200, text: '> Biometric template stored in local secure hardware — never transmitted', cls: 'text-orange-400' },
       { id: 5, delay: 5400, text: '> Search space: undefined — there is nothing here to amplify', cls: 'text-orange-400' },
-      { id: 6, delay: 6600, text: '█████████ ACCESS DENIED — NO SECRET TO CRACK █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
+      { id: 6, delay: 6600, text: '█████████ QUANTUM VECTOR BLOCKED — SWITCHING TACTICS █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
     ],
-    explanation:
-      "Grover's algorithm only helps an attacker who has a search space of guesses to explore — a password hash, a key. Biometric login removes that search space instead of trying to make it bigger. Your fingerprint or face never becomes a string of characters sitting in a database for a quantum computer to reconstruct, so there's nothing for the amplification step to lock onto.",
   },
   manager: {
-    verdict: 'VAULT SECURED',
-    concept: "Grover's quadratic speedup still isn't enough against real entropy",
     lines: [
       { id: 1, delay: 400, text: '> Re-running Grover\'s Algorithm on new 30-character password...', cls: 'text-green-400' },
       { id: 2, delay: 1600, text: '> Generating quantum superposition across 2¹⁹⁶ password states...', cls: 'text-green-400' },
       { id: 3, delay: 2900, text: '> Applying quadratic speedup — effective search reduced to 2⁹⁸ operations', cls: 'text-yellow-300' },
       { id: 4, delay: 4200, text: '> Estimated time to completion: ~10¹³ years on largest known quantum hardware', cls: 'text-orange-400' },
       { id: 5, delay: 5400, text: '> Entropy check: SUFFICIENT FOR QUANTUM RESISTANCE', cls: 'text-orange-400' },
-      { id: 6, delay: 6600, text: '█████████ ACCESS DENIED — BRUTE-FORCE INFEASIBLE █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
+      { id: 6, delay: 6600, text: '█████████ QUANTUM VECTOR BLOCKED — SWITCHING TACTICS █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
     ],
-    explanation:
-      "Grover's algorithm gives a quantum computer a quadratic speedup on brute-force search — it roughly squares the search space it can get through, which is the same as cutting a password's effective strength in half. Your original human-made password had so little entropy that halving it still left an easy search. A random 30+ character password carries roughly 196 bits of entropy; even after the quantum speedup, the attacker is left searching a space of about 2⁹⁸ possibilities — a number so large that no quantum computer we can foresee finishes in time that matters. Length and true randomness are what make a password itself quantum-resistant, without needing any extra hardware.",
   },
 };
 
-function DefenseCard({ option, onSelect }) {
+// The realistic, non-quantum weakness of each defense — what actually breaks these in practice.
+const WEAKNESS_SCENARIOS = {
+  twofa: {
+    prompt:
+      'A new email arrives in your inbox.\n\nFrom: Account Security <noreply@secure-alerts.com>\nSubject: Confirm your recent sign-in\n\n"We noticed a new sign-in to your account. To confirm this was you and keep your account secure, please reply to this email with the 6-digit verification code below.\n\nCode: 482913"',
+    choices: [
+      {
+        id: 'reply', holds: false,
+        label: 'Reply to the email with the code to confirm it was you',
+        resultText:
+          "That's exactly what the attacker wanted. No legitimate service ever asks you to reply with a one-time code by email — they only accept it typed directly into their real login page. The moment you sent it back, they used it to get in.",
+      },
+      {
+        id: 'ignore', holds: true,
+        label: 'Open the authenticator app directly and check your account there instead',
+        resultText:
+          "Good instinct. That email was fake — legitimate providers never ask you to reply with a verification code. By going straight to the app instead of trusting the email, the attacker never got the code they needed.",
+      },
+    ],
+  },
+  biometric: {
+    isLiveness: true,
+    prompt: "The attacker pulls a high-resolution photo of you from social media and holds it up to your camera.",
+    context: "Before granting access, the system challenges whoever's in front of the camera to prove they're actually alive.",
+    successText:
+      "Liveness confirmed — a static photo or replayed video could never have replicated that. The attacker is denied before they ever reach a password or code.",
+    failText:
+      "You didn't complete the sequence right — and that's exactly the gap attackers count on. Strict liveness checks cause enough false rejections that many real systems quietly fall back to something weaker (a PIN, a retry, a plain photo match) rather than lock real users out, and that fallback is what gets exploited.",
+  },
+  manager: {
+    isReentry: true,
+    prompt: 'Your password manager is only as strong as the ONE master password that unlocks all the others.',
+    context: 'The attacker now targets that single master password directly. Re-enter it from memory.',
+  },
+};
+
+function PasswordReentryChallenge({ password, maxAttempts = 3, confirmLabel = 'Confirm Password', placeholder = 'Re-enter your password', onResolve }) {
+  const [input, setInput] = useState('');
+  const [attemptsLeft, setAttemptsLeft] = useState(maxAttempts);
+  const [justFailed, setJustFailed] = useState(false);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (input === password) {
+      onResolve(true);
+      return;
+    }
+    const left = attemptsLeft - 1;
+    setAttemptsLeft(left);
+    setInput('');
+    setJustFailed(true);
+    if (left <= 0) onResolve(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 flex flex-col items-center gap-3">
+      <input
+        type="password"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={placeholder}
+        autoFocus
+        className="w-full max-w-xs rounded-xl bg-slate-950/70 border border-slate-700 px-4 py-2.5 text-center font-mono text-white placeholder-slate-600 focus:border-emerald-500 focus:outline-none"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={!input}
+          className="rounded-full bg-emerald-500 px-6 py-2.5 font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-40"
+        >
+          {confirmLabel}
+        </button>
+        <span className="font-mono text-xs text-slate-500">Attempts left: {attemptsLeft}</span>
+      </div>
+      {justFailed && (
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-red-400">
+          That's not it. Are you sure that's what you typed?
+        </motion.p>
+      )}
+    </form>
+  );
+}
+
+function DefenseCard({ option, selected, onToggle }) {
   return (
     <motion.div
       initial="idle"
       whileHover="hovered"
-      onClick={() => onSelect(option.id)}
-      className="relative flex flex-col rounded-2xl border border-slate-700 bg-slate-900/80 p-6 cursor-pointer select-none transition-colors hover:border-cyan-500/60"
+      onClick={onToggle}
+      className={`relative flex flex-col rounded-2xl border p-6 cursor-pointer select-none transition-colors ${
+        selected ? 'border-cyan-500 bg-cyan-950/20' : 'border-slate-700 bg-slate-900/80 hover:border-cyan-500/60'
+      }`}
     >
       <span className="text-4xl">{option.icon}</span>
       <h3 className="mt-3 text-lg font-semibold text-white">{option.title}</h3>
-      <p className="mt-1 text-xs text-slate-500">Hover to learn more · Click to deploy</p>
+      <p className="mt-1 text-xs text-slate-500">{selected ? 'Selected — click to remove' : 'Click to deploy'}</p>
 
       <motion.div
         variants={{
@@ -226,48 +230,146 @@ function DefenseCard({ option, onSelect }) {
         className="overflow-hidden"
       >
         <p className="text-sm text-slate-300 leading-relaxed">{option.description}</p>
-        <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-cyan-400">
-          Deploy This Defense →
-        </p>
       </motion.div>
 
-      <motion.div
-        variants={{ idle: { opacity: 0 }, hovered: { opacity: 1 } }}
-        transition={{ duration: 0.2 }}
-        className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.12)]"
-      />
+      {selected && (
+        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-cyan-500/60 shadow-[0_0_20px_rgba(6,182,212,0.15)]" />
+      )}
     </motion.div>
   );
 }
 
-function OutcomeTerminal({ option, username }) {
-  const consequence = CONSEQUENCES[option.id];
+const MANAGER_PASSWORD_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+
+function generateManagerPassword(length = 28) {
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += MANAGER_PASSWORD_CHARS[Math.floor(Math.random() * MANAGER_PASSWORD_CHARS.length)];
+  }
+  return out;
+}
+
+const LIVENESS_ACTIONS = [
+  { id: 'blink', label: 'Blink', icon: '👁️' },
+  { id: 'left', label: 'Turn Left', icon: '⬅️' },
+  { id: 'right', label: 'Turn Right', icon: '➡️' },
+  { id: 'smile', label: 'Smile', icon: '😊' },
+  { id: 'nod', label: 'Nod', icon: '🙂' },
+];
+const LIVENESS_SEQUENCE_LENGTH = 3;
+const LIVENESS_TIME_MS = 6000;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function LivenessChallenge({ onResolve }) {
+  const [sequence] = useState(() => shuffle(LIVENESS_ACTIONS).slice(0, LIVENESS_SEQUENCE_LENGTH));
+  const [buttonOrder] = useState(() => shuffle(LIVENESS_ACTIONS));
+  const [progress, setProgress] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(LIVENESS_TIME_MS);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (done) return;
+    const interval = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 100) {
+          clearInterval(interval);
+          setDone(true);
+          onResolve(false);
+          return 0;
+        }
+        return t - 100;
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, [done]);
+
+  function handleClick(actionId) {
+    if (done) return;
+    if (actionId !== sequence[progress].id) {
+      setDone(true);
+      onResolve(false);
+      return;
+    }
+    const next = progress + 1;
+    if (next === sequence.length) {
+      setDone(true);
+      onResolve(true);
+    } else {
+      setProgress(next);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <p className="text-center text-xs text-slate-400">Repeat this sequence before time runs out:</p>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 font-mono text-base">
+        {sequence.map((action, i) => (
+          <span key={action.id} className={i < progress ? 'text-emerald-400' : 'text-slate-200'}>
+            {action.icon} {action.label}
+            {i < sequence.length - 1 ? ' →' : ''}
+          </span>
+        ))}
+      </div>
+      <div className="mx-auto mt-3 h-1.5 w-48 overflow-hidden rounded-full bg-slate-800">
+        <div className="h-full bg-amber-500" style={{ width: `${(timeLeft / LIVENESS_TIME_MS) * 100}%` }} />
+      </div>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {buttonOrder.map((action) => (
+          <button
+            key={action.id}
+            onClick={() => handleClick(action.id)}
+            disabled={done}
+            className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-cyan-500/60 disabled:opacity-40"
+          >
+            {action.icon} {action.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GauntletRound({ defenseId, password, roundNumber, totalRounds, onComplete }) {
+  const option = DEFENSE_OPTIONS.find((o) => o.id === defenseId);
+  const consequence = CONSEQUENCES[defenseId];
+  const scenario = WEAKNESS_SCENARIOS[defenseId];
+  const managerPassword = useMemo(() => generateManagerPassword(), [defenseId]);
+
   const [visibleLines, setVisibleLines] = useState([]);
-  const [resolved, setResolved] = useState(false);
+  const [animDone, setAnimDone] = useState(false);
+  const [outcome, setOutcome] = useState(null); // { holds, resultText }
 
   useEffect(() => {
     const timers = consequence.lines.map((line) =>
       setTimeout(() => setVisibleLines((prev) => [...prev, line]), line.delay)
     );
     const lastDelay = consequence.lines[consequence.lines.length - 1].delay;
-    const t1 = setTimeout(() => setResolved(true), lastDelay + 700);
+    const t1 = setTimeout(() => setAnimDone(true), lastDelay + 700);
 
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(t1);
     };
-  }, [option.id]);
+  }, [defenseId]);
+
+  function resolve(holds, resultText) {
+    setOutcome({ holds, resultText });
+    setTimeout(() => onComplete({ id: defenseId, title: option.title, holds, resultText }), 2000);
+  }
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="mb-6 text-center">
-        <p className="text-sm uppercase tracking-[0.35em] text-cyan-400/80">Defense Deployed</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">
-          {option.icon} {option.title}
-        </h1>
-        <p className="mt-2 text-slate-400">
-          The quantum attacker returns to finish breaching <span className="text-cyan-300">{username}</span>'s account.
-        </p>
+      <div className="mb-4 text-center">
+        <p className="text-xs uppercase tracking-widest text-cyan-400/80">Layer {roundNumber} of {totalRounds}</p>
+        <h2 className="mt-2 text-2xl font-bold text-white">{option.icon} {option.title}</h2>
       </div>
 
       <div className="rounded-2xl border border-slate-700 bg-black/80 p-6 shadow-2xl shadow-black/60">
@@ -278,7 +380,7 @@ function OutcomeTerminal({ option, username }) {
           <span className="ml-2 font-mono text-xs text-slate-500">quantum_attack.exe</span>
         </div>
 
-        <div className="min-h-48 space-y-1 font-mono">
+        <div className="min-h-40 space-y-1 font-mono">
           {visibleLines.map((line) => (
             <motion.p
               key={line.id}
@@ -290,8 +392,7 @@ function OutcomeTerminal({ option, username }) {
               {line.text}
             </motion.p>
           ))}
-
-          {!resolved && visibleLines.length > 0 && (
+          {!animDone && visibleLines.length > 0 && (
             <motion.span
               animate={{ opacity: [1, 0] }}
               transition={{ repeat: Infinity, duration: 0.7 }}
@@ -302,16 +403,73 @@ function OutcomeTerminal({ option, username }) {
       </div>
 
       <AnimatePresence>
-        {resolved && (
+        {animDone && !outcome && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            className="mt-6 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 p-6"
+            className="mt-6 rounded-2xl border border-amber-500/40 bg-amber-950/20 p-6"
           >
-            <p className="text-center text-xs uppercase tracking-widest text-emerald-400">{consequence.verdict}</p>
-            <p className="mt-1 text-center text-sm font-semibold text-emerald-200">{consequence.concept}</p>
-            <p className="mt-4 text-sm leading-relaxed text-slate-300">{consequence.explanation}</p>
+            <p className="text-xs uppercase tracking-widest text-amber-400">New Attack Vector — Not Quantum</p>
+            <p className="mt-2 whitespace-pre-line text-sm text-slate-200">{scenario.prompt}</p>
+            {scenario.context && <p className="mt-2 text-xs text-slate-400">{scenario.context}</p>}
+
+            {scenario.isReentry ? (
+              <>
+                <div className="mt-4 rounded-lg border border-cyan-700/40 bg-slate-950/60 p-3 text-center">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-500">Stored In Your Vault For This Account</p>
+                  <p className="mt-1 break-all font-mono text-sm text-cyan-300">{managerPassword}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    You never see or type this — the manager fills it in for you. Only your master password unlocks it.
+                  </p>
+                </div>
+                <PasswordReentryChallenge
+                  password={password}
+                  confirmLabel="Confirm Master Password"
+                  placeholder="Re-enter your master password"
+                  onResolve={(holds) =>
+                    resolve(
+                      holds,
+                      holds
+                        ? 'Correct — the master password held. Every generated password behind it stays safe.'
+                        : "Three wrong guesses. You've locked yourself out of the one password protecting all the others."
+                    )
+                  }
+                />
+              </>
+            ) : scenario.isLiveness ? (
+              <LivenessChallenge
+                onResolve={(holds) => resolve(holds, holds ? scenario.successText : scenario.failText)}
+              />
+            ) : (
+              <div className="mt-4 flex flex-col gap-3">
+                {scenario.choices.map((choice) => (
+                  <button
+                    key={choice.id}
+                    onClick={() => resolve(choice.holds, choice.resultText)}
+                    className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-left text-sm text-slate-200 transition-colors hover:border-cyan-500/60"
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {outcome && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className={`mt-6 rounded-2xl border p-6 text-center ${outcome.holds ? 'border-emerald-500/50 bg-emerald-950/30' : 'border-red-500/50 bg-red-950/30'}`}
+          >
+            <p className={`text-xs uppercase tracking-widest ${outcome.holds ? 'text-emerald-400' : 'text-red-400'}`}>
+              {outcome.holds ? 'Layer Held' : 'Layer Compromised'}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{outcome.resultText}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -335,6 +493,7 @@ const SLOT_STYLES = {
 };
 
 const DEFAULT_PASSWORD = 'Passw0rd!';
+const REENTRY_MAX_ATTEMPTS = 3;
 
 function classifyPasswordChar(ch) {
   if (/[0-9]/.test(ch)) return 'digit';
@@ -433,9 +592,14 @@ function PasswordMission() {
   );
 
   const [visibleLines, setVisibleLines] = useState([]);
-  const [phase, setPhase] = useState('breaching'); // 'breaching' | 'breached' | 'resisted' | 'defending' | 'outcome'
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [phase, setPhase] = useState('breaching'); // 'breaching' | 'breached' | 'resisted' | 'lockedOut' | 'defending' | 'gauntlet' | 'outcome'
   const [crackComplete, setCrackComplete] = useState(false);
+
+  const [reentryPassed, setReentryPassed] = useState(false);
+
+  const [selectedDefenses, setSelectedDefenses] = useState([]);
+  const [gauntletIndex, setGauntletIndex] = useState(0);
+  const [gauntletResults, setGauntletResults] = useState([]);
 
   useEffect(() => {
     const timers = lines.map((line) =>
@@ -451,17 +615,34 @@ function PasswordMission() {
     };
   }, []);
 
-  function handleSelectDefense(optionId) {
-    setSelectedOption(optionId);
-    setPhase('outcome');
+  function handleToggleDefense(id) {
+    setSelectedDefenses((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  function handleTryAnother() {
-    setSelectedOption(null);
+  function handleDeploy() {
+    setGauntletIndex(0);
+    setGauntletResults([]);
+    setPhase('gauntlet');
+  }
+
+  function handleRoundComplete(result) {
+    setGauntletResults((prev) => {
+      const next = [...prev, result];
+      if (gauntletIndex + 1 < selectedDefenses.length) {
+        setGauntletIndex((i) => i + 1);
+      } else {
+        setPhase('outcome');
+      }
+      return next;
+    });
+  }
+
+  function handleRestartLoadout() {
+    setSelectedDefenses([]);
+    setGauntletResults([]);
+    setGauntletIndex(0);
     setPhase('defending');
   }
-
-  const selected = DEFENSE_OPTIONS.find((o) => o.id === selectedOption);
 
   return (
     <main className="min-h-screen bg-slate-950">
@@ -643,27 +824,88 @@ function PasswordMission() {
                     </div>
                     <p className="mt-4 text-sm leading-relaxed text-slate-300">
                       No password hash was ever recovered — this attack never even reached your account's other defenses.
-                      But no password stays quantum-resistant forever. Want to see how much further you can harden this vault?
                     </p>
 
-                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                      <button
-                        onClick={() => setPhase('defending')}
-                        className="rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
-                      >
-                        Add Extra Layers Anyway
-                      </button>
-                      <Link
-                        to="/mission/1"
-                        className="rounded-full bg-slate-800 px-6 py-3 text-slate-200 hover:bg-slate-700"
-                      >
-                        Finish Mission
-                      </Link>
-                    </div>
+                    {!reentryPassed ? (
+                      <div className="mt-6 rounded-xl border border-emerald-500/30 bg-black/40 p-5 text-left">
+                        <p className="text-center text-sm font-semibold text-emerald-200">
+                          One last check: prove it's really yours.
+                        </p>
+                        <p className="mt-1 text-center text-xs text-slate-400">
+                          A password a quantum computer can't guess is only useful if <em>you</em> can. Re-enter it from memory — no peeking.
+                        </p>
+                        <PasswordReentryChallenge
+                          password={password}
+                          onResolve={(holds) => (holds ? setReentryPassed(true) : setPhase('lockedOut'))}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-4 text-sm font-semibold text-emerald-300"
+                        >
+                          Confirmed — you remembered it. Quantum-resistant and yours.
+                        </motion.p>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                          But no password stays quantum-resistant forever. Want to see how much further you can harden this vault?
+                        </p>
+                        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                          <button
+                            onClick={() => setPhase('defending')}
+                            className="rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+                          >
+                            Add Extra Layers Anyway
+                          </button>
+                          <Link
+                            to="/mission/1"
+                            className="rounded-full bg-slate-800 px-6 py-3 text-slate-200 hover:bg-slate-700"
+                          >
+                            Finish Mission
+                          </Link>
+                        </div>
+                      </>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
+          </motion.div>
+        ) : phase === 'lockedOut' ? (
+          <motion.div
+            key="lockedOut"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex min-h-screen flex-col items-center justify-center px-6 py-16"
+          >
+            <motion.div
+              className="pointer-events-none fixed inset-0"
+              animate={{ opacity: [0, 0.18, 0.09] }}
+              transition={{ duration: 1.5 }}
+              style={{ background: 'radial-gradient(circle at 50% 40%, #dc2626 0%, transparent 70%)' }}
+            />
+            <div className="w-full max-w-xl rounded-2xl border border-red-500/50 bg-black/80 p-8 text-center shadow-2xl shadow-black/60">
+              <p className="text-xs uppercase tracking-widest text-red-400">
+                █████████ ACCOUNT LOCKED █████████
+              </p>
+              <h1 className="mt-4 text-2xl font-bold text-white">You Forgot the Password You Chose</h1>
+              <p className="mt-4 text-sm leading-relaxed text-slate-300">
+                A quantum computer with {assessment.entropyBits} bits of keyspace to search couldn't crack this password.
+                But after {REENTRY_MAX_ATTEMPTS} tries, neither could you remember it. Entropy that only lives on a screen you mashed once
+                isn't a defense — it's just a different way to lock yourself out.
+              </p>
+              <p className="mt-4 text-xs text-slate-500">
+                A password only protects an account if the person who owns it can actually use it.
+              </p>
+              <Link
+                to="/mission/1"
+                className="mt-8 inline-flex rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                Restart Mission
+              </Link>
+            </div>
           </motion.div>
         ) : phase === 'defending' ? (
           <motion.div
@@ -673,23 +915,35 @@ function PasswordMission() {
             transition={{ duration: 0.6 }}
             className="mx-auto max-w-4xl px-6 py-16"
           >
-            <div className="mb-12 text-center">
+            <div className="mb-8 text-center">
               <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">What Happens Next?</p>
-              <h2 className="mt-3 text-4xl font-bold text-white">How Do You Fight Back?</h2>
+              <h2 className="mt-3 text-4xl font-bold text-white">Build Your Defense Loadout</h2>
               <p className="mx-auto mt-4 max-w-xl text-slate-400">
                 {assessment.quantumResistant
-                  ? 'Your password already held the line — but no password stays quantum-resistant forever. Choose one of three strategies to see what real defense-in-depth looks like.'
-                  : 'Your password alone is no longer enough. Choose one of three strategies to see how it holds up against the same quantum attack.'}
+                  ? 'Your password already held the line — but no password stays quantum-resistant forever. Deploy as many layers as you want: the more you stack, the harder this account is to fully compromise. But every layer you deploy still has to survive its own attack.'
+                  : 'Your password alone is no longer enough. Deploy as many layers as you want: the more you stack, the harder this account is to fully compromise. But every layer you deploy still has to survive its own attack.'}
               </p>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-3">
               {DEFENSE_OPTIONS.map((option) => (
-                <DefenseCard key={option.id} option={option} onSelect={handleSelectDefense} />
+                <DefenseCard
+                  key={option.id}
+                  option={option}
+                  selected={selectedDefenses.includes(option.id)}
+                  onToggle={() => handleToggleDefense(option.id)}
+                />
               ))}
             </div>
 
-            <div className="mt-12 text-center">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={handleDeploy}
+                disabled={selectedDefenses.length === 0}
+                className="rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Deploy {selectedDefenses.length || ''} Layer{selectedDefenses.length === 1 ? '' : 's'}
+              </button>
               <Link
                 to="/mission/1"
                 className="inline-flex rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700"
@@ -697,6 +951,23 @@ function PasswordMission() {
                 Back to Mission
               </Link>
             </div>
+          </motion.div>
+        ) : phase === 'gauntlet' ? (
+          <motion.div
+            key="gauntlet"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex min-h-screen flex-col items-center justify-center px-6 py-16"
+          >
+            <GauntletRound
+              key={selectedDefenses[gauntletIndex]}
+              defenseId={selectedDefenses[gauntletIndex]}
+              password={password}
+              roundNumber={gauntletIndex + 1}
+              totalRounds={selectedDefenses.length}
+              onComplete={handleRoundComplete}
+            />
           </motion.div>
         ) : (
           <motion.div
@@ -706,22 +977,61 @@ function PasswordMission() {
             transition={{ duration: 0.6 }}
             className="flex min-h-screen flex-col items-center justify-center px-6 py-16"
           >
-            <OutcomeTerminal option={selected} username={username} />
+            {(() => {
+              const holdsCount = gauntletResults.filter((r) => r.holds).length;
+              const totalCount = gauntletResults.length;
+              const allHeld = totalCount > 0 && holdsCount === totalCount;
+              const noneHeld = totalCount > 0 && holdsCount === 0;
+              const verdictColor = allHeld ? 'text-emerald-400' : noneHeld ? 'text-red-400' : 'text-amber-400';
 
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={handleTryAnother}
-                className="rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700"
-              >
-                Try a Different Defense
-              </button>
-              <Link
-                to="/mission/1"
-                className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
-              >
-                Finish Mission
-              </Link>
-            </div>
+              return (
+                <div className="w-full max-w-2xl text-center">
+                  <p className={`text-xs uppercase tracking-widest ${verdictColor}`}>
+                    {allHeld ? 'FULL DEFENSE-IN-DEPTH' : noneHeld ? 'ACCOUNT COMPROMISED' : 'BREACH PARTIALLY CONTAINED'}
+                  </p>
+                  <h1 className="mt-2 text-3xl font-bold text-white">
+                    {holdsCount}/{totalCount} Layer{totalCount === 1 ? '' : 's'} Held
+                  </h1>
+
+                  <div className="mt-8 space-y-3 text-left">
+                    {gauntletResults.map((r) => (
+                      <div
+                        key={r.id}
+                        className={`rounded-xl border p-4 ${r.holds ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-red-500/40 bg-red-950/20'}`}
+                      >
+                        <p className={`text-xs uppercase tracking-wide ${r.holds ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {r.title} — {r.holds ? 'Held' : 'Compromised'}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-300">{r.resultText}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="mt-6 text-sm leading-relaxed text-slate-400">
+                    {allHeld
+                      ? "Every layer you chose survived its own attack, not just the quantum one. That's what real defense-in-depth looks like — no single point of failure."
+                      : noneHeld
+                        ? 'Every layer you picked had a gap, and the attacker found all of them. Stacking defenses only helps if each one is actually used correctly.'
+                        : "At least one layer held, so the attacker didn't get everything — but a failed layer is still a real exposure. Defense-in-depth reduces risk, it doesn't erase it."}
+                  </p>
+
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={handleRestartLoadout}
+                      className="rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700"
+                    >
+                      Try a Different Loadout
+                    </button>
+                    <Link
+                      to="/mission/1"
+                      className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+                    >
+                      Finish Mission
+                    </Link>
+                  </div>
+                </div>
+              );
+            })()}
           </motion.div>
         )}
       </AnimatePresence>

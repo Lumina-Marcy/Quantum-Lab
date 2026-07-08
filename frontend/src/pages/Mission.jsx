@@ -1,7 +1,54 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { evaluatePassword } from '../utils/passwordStrength';
+
+const STRENGTH_METER_MAX_BITS = 130;
+
+function strengthTier(assessment) {
+  if (assessment.length === 0) return { label: '', color: 'bg-slate-700' };
+  if (assessment.quantumResistant) return { label: 'Quantum-resistant', color: 'bg-emerald-500' };
+  if (assessment.predictable) return { label: 'Predictable — crackable fast', color: 'bg-red-500' };
+  if (assessment.entropyBits >= 70) return { label: 'Getting there', color: 'bg-amber-500' };
+  return { label: 'Weak', color: 'bg-red-500' };
+}
+
+function PasswordStrengthCoach({ password, username, email }) {
+  const assessment = useMemo(() => evaluatePassword(password, username, email), [password, username, email]);
+  if (!password) return null;
+
+  const tier = strengthTier(assessment);
+  const fillPct = Math.min(100, Math.round((assessment.entropyBits / STRENGTH_METER_MAX_BITS) * 100));
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+        <motion.div
+          className={`h-full ${tier.color}`}
+          initial={false}
+          animate={{ width: `${fillPct}%` }}
+          transition={{ duration: 0.25 }}
+        />
+      </div>
+      <div className="flex items-center justify-between font-mono text-xs">
+        <span className={assessment.quantumResistant ? 'text-emerald-400' : assessment.predictable ? 'text-red-400' : 'text-amber-400'}>
+          {tier.label}
+        </span>
+        <span className="text-slate-500">{assessment.entropyBits} bits entropy</span>
+      </div>
+      {assessment.reasons.length > 0 ? (
+        <ul className="space-y-1 text-xs text-slate-500">
+          {assessment.reasons.map((reason) => (
+            <li key={reason}>⚠ {reason}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-emerald-500/80">✓ Long, unpredictable, and mixes character types — this would hold up.</p>
+      )}
+    </div>
+  );
+}
 
 const missionData = {
   1: {
@@ -125,6 +172,7 @@ function UserDataForm({ profile, setProfile }) {
               placeholder="Choose a sample password"
               className="w-full rounded-xl bg-slate-950/70 border border-slate-700 px-4 py-3 text-white placeholder-slate-600 focus:border-cyan-500 focus:outline-none"
             />
+            <PasswordStrengthCoach password={form.password} username={form.username} email={form.email} />
           </div>
           <button
             type="submit"
