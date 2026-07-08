@@ -68,3 +68,20 @@ CREATE TABLE IF NOT EXISTS sandbox_runs (
     quantum_steps     INTEGER NOT NULL,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ──────────────────────────────────────────────
+-- 6. lessons
+-- ──────────────────────────────────────────────
+-- id is a human-readable slug (e.g. 'what-is-a-qubit'), not a SERIAL, so it can
+-- be used directly in the /resources/:id frontend route with no lookup table.
+CREATE TABLE IF NOT EXISTS lessons (
+    id          VARCHAR PRIMARY KEY,
+    title       VARCHAR     NOT NULL,
+    category    VARCHAR     NOT NULL,
+    summary     TEXT        NOT NULL,
+    video_id    VARCHAR     NOT NULL,
+    duration    VARCHAR,
+    links       JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    interactive VARCHAR,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

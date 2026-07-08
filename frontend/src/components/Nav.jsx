@@ -12,9 +12,14 @@ function Nav() {
 
   return (
     <nav className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-      <Link to="/" className="text-lg font-bold text-white tracking-tight">
-        Quantum Lab
-      </Link>
+      <div className="flex items-center gap-6">
+        <Link to="/" className="text-lg font-bold text-white tracking-tight">
+          Quantum Lab
+        </Link>
+        <Link to="/resources" className="text-sm text-slate-300 transition hover:text-white">
+          Resources
+        </Link>
+      </div>
 
       <div className="flex items-center gap-4">
         {user ? (

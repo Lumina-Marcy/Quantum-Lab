@@ -42,7 +42,7 @@ missions = [
     ),
 ]
 
-@router.get("/", response_model=List[Mission])
+@router.get("", response_model=List[Mission])
 def get_missions(difficulty: str | None = None):
     if difficulty:
         return [mission for mission in missions if mission.difficulty == difficulty]

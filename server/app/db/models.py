@@ -1,4 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, TIMESTAMP
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 
@@ -58,4 +59,17 @@ class SandboxRun(Base):
     algorithm_type = Column(String, nullable=False)
     classical_steps = Column(Integer, nullable=False)
     quantum_steps = Column(Integer, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+class Lesson(Base):
+    __tablename__ = 'lessons'
+
+    id = Column(String, primary_key=True)
+    title = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    summary = Column(Text, nullable=False)
+    video_id = Column(String, nullable=False)
+    duration = Column(String, nullable=True)
+    links = Column(JSONB, nullable=False, server_default='[]')
+    interactive = Column(String, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())

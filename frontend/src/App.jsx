@@ -8,6 +8,8 @@ import Mission from './pages/Mission';
 import PasswordMission from './pages/PasswordMission';
 import Sandbox from './pages/Sandbox';
 import Settings from './pages/Settings';
+import Resources from './pages/Resources';
+import ResourceDetail from './pages/ResourceDetail';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -22,6 +24,8 @@ function App() {
           <Route path="/mission/:id" element={<Mission />} />
           <Route path="/mission/1/play" element={<PasswordMission />} />
           <Route path="/sandbox" element={<Sandbox />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/resources/:id" element={<ResourceDetail />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
