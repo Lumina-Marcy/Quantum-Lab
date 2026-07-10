@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../apiBase';
 
-const API = '/api/auth';
+const API = `${API_BASE_URL}/api/auth`;
 
 function Login() {
   const navigate = useNavigate();
