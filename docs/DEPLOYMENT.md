@@ -4,148 +4,183 @@
 
 | Area                              | What changed                                                                                     |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `frontend/src/apiBase.js`          | New — exports `API_BASE_URL`, read from `import.meta.env.VITE_API_BASE_URL`, empty string by default |
-| `frontend/src/pages/Login.jsx`     | API call now prefixed with `API_BASE_URL`                                                           |
-| `frontend/src/pages/Register.jsx`  | API calls now prefixed with `API_BASE_URL` (including the auto-login-after-register call, which was previously hardcoded to `/api/auth/login`) |
-| `frontend/src/pages/Settings.jsx`  | API calls now prefixed with `API_BASE_URL`                                                           |
-| `server/app/core/config.py`        | Added `cors_origins` setting (comma-separated string) and a `cors_origins_list` property             |
-| `server/app/main.py`               | `CORSMiddleware` now reads `allow_origins` from `settings.cors_origins_list` instead of a hardcoded `["http://localhost:5173"]` |
-| `.env.example`                     | Documented the new `CORS_ORIGINS` variable                                                          |
-| `server/requirements.txt`          | Duplicate/conflicting version pins removed (see below)                                              |
-| `render.yaml`                      | New — Blueprint defining both the backend web service and frontend static site together             |
+| `server/app/main.py`               | Now serves the built frontend (`frontend/dist`) directly — static assets under `/assets`, an SPA fallback to `index.html` for any other non-API path, and a JSON info response at `/` when no build exists (local API-only dev) |
+| `Dockerfile`                        | New — multi-stage build: builds the frontend (Node), then copies the built `dist/` into a Python image alongside the backend |
+| `.dockerignore`                    | New — excludes `node_modules`, `.venv`, `__pycache__`, `dist`, `.git` from the Docker build context |
+| `render.yaml`                      | Rewritten — **one** Docker-based web service instead of two separate services                     |
+| `frontend/src/apiBase.js`          | Kept — exports `API_BASE_URL`, read from `import.meta.env.VITE_API_BASE_URL`, empty string by default |
+| `frontend/src/pages/Login.jsx`, `Register.jsx`, `Settings.jsx` | Kept — API calls prefixed with `API_BASE_URL`                                 |
+| `server/app/core/config.py`        | Kept — `cors_origins` setting (comma-separated string) and `cors_origins_list` property             |
+| `server/requirements.txt`          | Duplicate/conflicting version pins removed                                                          |
 
 ---
 
-## Why
+## Why — and why this changed from the original plan
 
-Getting this deployed on Render (or any host where the frontend and backend live on two different URLs) exposed problems with how the app was wired for local-only development:
+The first pass at deployment prep (still described further down, since it's not wasted work) split the app into **two Render services**: a static site for the frontend and a separate web service for the backend, cross-wired via `VITE_API_BASE_URL` and `CORS_ORIGINS`.
 
-1. **Every fetch call used a relative path** (`/api/auth/...`), which only worked locally because `vite.config.js` proxies `/api` to `http://localhost:8000` in dev. That proxy doesn't exist in a production static build, so relative calls would 404 once frontend and backend are on separate domains.
-2. **CORS was hardcoded** to `http://localhost:5173` in `server/app/main.py`, so the deployed backend would reject every request from the deployed frontend's real URL.
-3. **`server/requirements.txt` had duplicate, conflicting version pins** — `fastapi`, `uvicorn`, `psycopg`, `pydantic`, and `pydantic-settings` were each listed twice with different versions (a leftover from a merge). This wasn't just cosmetic: reinstalling from the file showed the venv had actually picked up the *older*, untested version of each (e.g. `fastapi==0.114.0`, `pydantic==2.8.0`) rather than the versions actually developed and tested against (`fastapi==0.115.6`, `pydantic==2.13.4`).
+That works, but it means two things to deploy, two URLs, and cross-origin requests in production. Once it came up that hitting the backend's root URL only returned JSON instead of the actual app, the simpler fix was to **serve both from one process**: FastAPI now serves the built React app directly, so there's a single URL, a single service, and — since the frontend and API are now same-origin in production — CORS and `VITE_API_BASE_URL` stop being production concerns entirely (they're still useful for local dev, see below).
 
-### `VITE_API_BASE_URL`
-
-`frontend/src/apiBase.js`:
-
-```js
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-```
-
-Every file that calls the API imports this and prefixes its API constant, e.g. (`Login.jsx`):
-
-```js
-import { API_BASE_URL } from '../apiBase';
-const API = `${API_BASE_URL}/api/auth`;
-```
-
-- **Locally**, `VITE_API_BASE_URL` is unset → `API_BASE_URL` is `''` → calls stay relative (`/api/auth/login`) and keep working through the existing Vite dev proxy, unchanged.
-- **In production**, `VITE_API_BASE_URL` is set at build time (e.g. `https://quantum-lab-backend.onrender.com`) → Vite bakes it in as a literal at build time → calls become absolute, reaching the backend directly with no reverse-proxy/rewrite-rule needed on the frontend's static site.
-
-> This currently covers `Login.jsx`, `Register.jsx`, and `Settings.jsx` — the only files on `main` that make `fetch()` calls to the backend at the time of writing. A separate resource-page branch (mini lessons / interactives) adds its own API client (`lessonsApi.js`) — when that branch merges, it should follow this same `API_BASE_URL` pattern rather than hardcoded relative paths.
-
-### CORS
-
-`server/app/core/config.py` gained:
+### How `server/app/main.py` serves the frontend
 
 ```python
-cors_origins: str = "http://localhost:5173"
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
-@property
-def cors_origins_list(self) -> list[str]:
-    return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+if FRONTEND_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        candidate = FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+else:
+    @app.get("/")
+    def read_root():
+        return {"name": app.title, "version": app.version, "status": "ok", "docs": "/docs"}
 ```
 
-`server/app/main.py`'s `CORSMiddleware` now reads `allow_origins=settings.cors_origins_list`. Default behavior for local dev is unchanged (still allows `http://localhost:5173`); in production, set `CORS_ORIGINS` to the deployed frontend's URL (comma-separate multiple origins if needed, e.g. a preview URL plus the production URL).
+- `app.include_router(routers.api_router)` is registered **before** the catch-all route, so `/api/...` always matches its own handlers first — the catch-all never shadows the API.
+- `/assets/*` (the hashed JS/CSS files Vite produces) are served via a dedicated `StaticFiles` mount for correct MIME types.
+- Any other path that isn't a real file on disk (e.g. `/login`, `/resources/some-lesson`) falls back to `index.html`, letting React Router take over client-side — this is the standard SPA-on-a-server pattern.
+- If `frontend/dist` doesn't exist (e.g. running the backend alone locally without building the frontend first), the root falls back to the small JSON info response instead of crashing.
+
+### `Dockerfile`
+
+A two-stage build, since the backend needs Python and the frontend build needs Node — no single base image has both, and Render's native (non-Docker) runtimes only provide one language toolchain per service:
+
+```dockerfile
+FROM node:20-slim AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+FROM python:3.12-slim
+WORKDIR /app/server
+COPY server/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY server/ ./
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
+
+EXPOSE 8000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+```
+
+The final image lays out `/app/server/...` and `/app/frontend/dist/...` as siblings under `/app`, mirroring the repo's actual `server/`/`frontend/` layout — so `main.py`'s `Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"` resolves correctly without any path special-casing for the container.
+
+> **Honest caveat:** there's no Docker available in the environment this was built in, so the Dockerfile itself could not be built or run (`docker build` was not executable here). What *was* verified directly: every command the Dockerfile runs (`npm install && npm run build`, `pip install -r requirements.txt`, `uvicorn app.main:app`) works correctly when run by hand in the matching directory layout, and the resulting `server`+`frontend/dist` structure was exactly what was tested against `main.py`'s static-serving logic (see Verification Log). The Dockerfile mirrors those exact steps and paths, but build it once locally (`docker build -t quantum-lab .` from the repo root) before relying on it for a real deploy.
 
 ### `render.yaml`
 
-A single Blueprint file defining both services so they can be deployed together:
+Now a single service:
 
-- **Backend** (`quantum-lab-backend`): Python web service, `rootDir: server`, `pip install -r requirements.txt`, starts with `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. `DATABASE_URL` and `SECRET_KEY` are marked `sync: false` (Render will prompt for these — they're secrets, not committed anywhere).
-- **Frontend** (`quantum-lab-frontend`): static site, `rootDir: frontend`, `npm install && npm run build`, publishes `dist`. Includes the SPA fallback rewrite (`/* → /index.html`) required for React Router routes to survive a page refresh.
-- The two services' URLs are cross-wired automatically via Render's `fromService`: the backend's `CORS_ORIGINS` is set from the frontend service's host, and the frontend's `VITE_API_BASE_URL` is set from the backend service's host.
+```yaml
+services:
+  - type: web
+    name: quantum-lab
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: http://localhost:5173
+```
 
-> **Caveat, called out in comments in the file itself:** Render's `fromService` `property: host`/`hostport` may return a bare hostname rather than a full `https://...` origin — this wasn't verified against real Render infrastructure (no way to test that from a local dev sandbox). After the first deploy, check that `CORS_ORIGINS` and `VITE_API_BASE_URL` actually resolved to full URLs; hardcode them in `render.yaml` if not.
+`DATABASE_URL` and `SECRET_KEY` are marked `sync: false` — Render will prompt for these on first deploy since they're secrets, never committed. `CORS_ORIGINS` is left at its local-dev default since it isn't load-bearing for the combined deploy — it only matters if you point a locally-running Vite dev server at the deployed backend.
+
+### What's still true from the original (two-service) plan
+
+`frontend/src/apiBase.js` and the `API_BASE_URL`-prefixed fetch calls in `Login.jsx`/`Register.jsx`/`Settings.jsx`, plus the `cors_origins` config, are all still in place and still useful:
+
+- Locally, `npm run dev` (Vite on :5173) proxying to `uvicorn` (:8000) is unaffected — `API_BASE_URL` defaults to `''`, `CORS_ORIGINS` defaults to `http://localhost:5173`, nothing changed about the day-to-day dev workflow.
+- If this project ever needs to go back to two separately-hosted services (e.g. a CDN-fronted frontend), that wiring is already there and doesn't need to be rebuilt.
+
+`server/requirements.txt`'s duplicate-version fix is unrelated to this switch and stays as-is.
 
 ---
 
 ## How to Test
 
-### 1. Backend — requirements and config
+### 1. Build the frontend, then run the backend serving it
 
 ```bash
+cd frontend && npm install && npm run build && cd ..
 cd server
-source ../.venv/bin/activate   # or your venv's activate script
+source ../.venv/bin/activate
 pip install -r requirements.txt
-python -c "from app.main import app; print('backend imports OK')"
+uvicorn app.main:app &
 ```
-
-Confirm the installed versions match the file exactly (no duplicate/older versions silently winning):
 
 ```bash
-pip show fastapi pydantic pydantic-settings psycopg | grep -E "Name|Version"
+curl -s -o /dev/null -w "%{http_code} %{content_type}\n" http://127.0.0.1:8000/
+# expect: 200 text/html; charset=utf-8
+
+curl -s -o /dev/null -w "%{http_code} %{content_type}\n" http://127.0.0.1:8000/login
+# expect: 200 text/html; charset=utf-8 (SPA fallback — React Router owns this route)
+
+ASSET=$(ls frontend/dist/assets | grep '\.js$' | head -1)
+curl -s -o /dev/null -w "%{http_code} %{content_type}\n" "http://127.0.0.1:8000/assets/$ASSET"
+# expect: 200 text/javascript; charset=utf-8
+
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/api/auth/login -X POST -H "Content-Type: application/json" -d '{}'
+# expect: 422 (proves this still reaches the real handler, not swallowed by the SPA fallback)
+
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/docs
+# expect: 200 (Swagger UI)
 ```
 
-### 2. CORS — default and multi-origin
+### 2. Confirm the JSON fallback when there's no build
 
 ```bash
-uvicorn app.main:app --reload &
-
-# Default origin (should succeed)
-curl -i -X OPTIONS http://127.0.0.1:8000/api/auth/login \
-  -H "Origin: http://localhost:5173" \
-  -H "Access-Control-Request-Method: POST"
-# Expect: access-control-allow-origin: http://localhost:5173
-
-# Multi-origin parsing
-CORS_ORIGINS="https://foo.onrender.com, https://bar.onrender.com" python -c "
-from app.core.config import Settings
-print(Settings(_env_file='.env').cors_origins_list)
-"
-# Expect: ['https://foo.onrender.com', 'https://bar.onrender.com']
+mv frontend/dist frontend/dist.bak
+# restart uvicorn, then:
+curl -s http://127.0.0.1:8000/ | python3 -m json.tool
+# expect: {"name": "Quantum Lab API", "version": "0.1.0", "status": "ok", "docs": "/docs"}
+mv frontend/dist.bak frontend/dist
 ```
 
-### 3. Frontend — `VITE_API_BASE_URL` baked in correctly
+### 3. Docker build (do this before your first real deploy — not verified in this pass)
 
 ```bash
-cd frontend
-
-# Default (no env var) — API calls should stay relative
-npm run build
-grep -o "/api/auth" dist/assets/*.js   # should match
-
-# With the env var — the real URL should appear as a literal in the bundle
-VITE_API_BASE_URL="https://quantum-lab-backend.onrender.com" npm run build
-grep -o "https://quantum-lab-backend.onrender.com" dist/assets/*.js   # should match
-
-# Rebuild without the env var afterward to restore the normal dev-friendly build
-npm run build
+docker build -t quantum-lab .
+docker run -p 8000:8000 -e DATABASE_URL=... -e SECRET_KEY=... quantum-lab
+curl http://localhost:8000/
 ```
 
-### 4. Full local run, end to end
+### 4. Local dev workflow, unaffected
 
-1. Start the backend (`uvicorn app.main:app --reload`) and frontend (`npm run dev`) as usual — nothing about local dev workflow should have changed.
-2. Log in / register / update account settings and confirm everything still works (still goes through the Vite proxy, `API_BASE_URL` is empty locally).
+```bash
+# Terminal 1
+cd server && uvicorn app.main:app --reload
+# Terminal 2
+cd frontend && npm run dev
+```
+Visit `http://localhost:5173` as before — nothing about this workflow should feel different.
 
 ### 5. On Render
 
-1. Push `render.yaml` and create a new Blueprint from the repo.
-2. Render will prompt for `DATABASE_URL` and `SECRET_KEY` on the backend service (these are intentionally not synced/committed).
-3. After the first deploy, open the frontend service's environment tab and confirm `VITE_API_BASE_URL` resolved to a full `https://...` URL (not just a bare hostname) — same check for the backend's `CORS_ORIGINS`. Fix manually in `render.yaml` if either didn't resolve as expected.
-4. Load the deployed frontend URL, open the browser's network tab, and confirm API calls go to the deployed backend URL with no CORS errors.
+1. Push `Dockerfile`, `.dockerignore`, and `render.yaml`, then create a new Blueprint from the repo.
+2. Render prompts for `DATABASE_URL` and `SECRET_KEY`.
+3. Once deployed, visit the single service URL — it should show the actual app, not JSON, and all routes (including a hard refresh on a client-side route) should work.
 
 ---
 
 ## Verification Log
 
-Manually verified on 2026-07-10, without access to real Render infrastructure (verified everything that's testable locally; flagged what isn't):
+Manually verified on 2026-07-10 (no Docker available in this environment — see caveat above):
 
-- `server/requirements.txt`: confirmed the *before* state had the venv running the older duplicate-block versions (`fastapi==0.114.0`, `pydantic==2.8.0`, etc.) via `pip show` — validating that the duplication was a real bug, not just cosmetic. After the fix, reinstalled and confirmed the newer versions (`fastapi==0.115.6`, `pydantic==2.13.4`, etc.) are what's actually installed, and `from app.main import app` still imports cleanly.
-- CORS: started the backend and sent a real `OPTIONS` preflight request against `/api/auth/login` with `Origin: http://localhost:5173` — confirmed `access-control-allow-origin: http://localhost:5173` in the response, matching the new default. Confirmed comma-separated `CORS_ORIGINS` parses into a clean list with whitespace trimmed.
-- `VITE_API_BASE_URL`: built the frontend twice — once with no env var (relative paths preserved) and once with `VITE_API_BASE_URL=https://quantum-lab-backend.onrender.com` set (confirmed that exact URL string appears as a literal in the built bundle, to be joined with each API path at runtime via the template literal). Rebuilt a final time without the env var to leave the repo in its normal local-dev-friendly state.
-- Confirmed no other hardcoded `/api` string literals remained anywhere in `frontend/src` after the fetch-call updates — checked against the actual current file set on `main` (`Login.jsx`, `Register.jsx`, `Settings.jsx` are the only files that call the API right now).
+- Built the frontend (`npm run build`) and started the backend against that build. Confirmed: `/` → `200 text/html` serving the real `index.html` (verified the actual markup, including the built `<script>`/`<link>` tags pointing at `/assets/...`); `/login` (a client-only route with no server handler) → `200 text/html`, falling back to the same `index.html` as intended; `/assets/<hashed-file>.js` → `200 text/javascript`; `/api/auth/login` (POST, empty body) → `422`, proving the API router still takes priority over the catch-all; `/docs` → `200`.
+- Confirmed `app.include_router(routers.api_router)` registered before the catch-all route is what makes the API take priority — this was checked by hitting a real API endpoint after adding the catch-all, not just assumed from route-ordering theory.
+- Confirmed `frontend/dist` is already covered by the existing `.gitignore` (`dist` pattern), so the local build output won't get committed.
 
-**Not verified (no way to test without a real Render account/deploy):** whether `render.yaml`'s `fromService` `property: host`/`hostport` actually resolves to a full `https://...` origin for both `CORS_ORIGINS` and `VITE_API_BASE_URL`, or a bare hostname that would need reformatting. Check this manually after the first Blueprint deploy.
+**Not verified:** the `Dockerfile` itself — no `docker` binary available in this environment. The individual commands it runs were verified by hand (see above), and the file mirrors those commands and the directory layout that was tested, but run `docker build` for real before the first production deploy.
 
-**Note on repo state:** this work was implemented twice in the same day — the first pass was lost when uncommitted changes got wiped during an unrelated `git` operation (see project history around 2026-07-08/10). This doc and the underlying code reflect the second, current pass, redone directly against the `main` branch. **Commit this work once reviewed** so it doesn't need a third pass.
+**Prior two-service verification** (still relevant background, from before the switch): `requirements.txt` dedup confirmed via `pip show`; CORS default and multi-origin parsing confirmed via a live preflight request and direct `Settings` parsing; `VITE_API_BASE_URL` baking confirmed by inspecting the built JS bundle both with and without the env var set.
