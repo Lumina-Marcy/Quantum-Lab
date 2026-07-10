@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: quantum-lab-backend
+    runtime: python
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        fromService:
+          type: web
+          name: quantum-lab-frontend
+          property: host
+          # Render only provides the bare host here; if the resulting value
+          # isn't a full "https://<host>" origin, set this manually instead.
+
+  - type: web
+    name: quantum-lab-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: quantum-lab-backend
+          property: hostport
+          # Same caveat as above — confirm this resolves to a full
+          # "https://..." URL after the first deploy, and hardcode it here
+          # if it doesn't.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

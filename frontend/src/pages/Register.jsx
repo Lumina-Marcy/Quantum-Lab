@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../apiBase';
 
-const API = '/api/auth';
+const API = `${API_BASE_URL}/api/auth`;
 
 function Register() {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ function Register() {
         setError(message || 'Registration failed');
         return;
       }
-      const loginRes = await fetch('/api/auth/login', {
+      const loginRes = await fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password }),

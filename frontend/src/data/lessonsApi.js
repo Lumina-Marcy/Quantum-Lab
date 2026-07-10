@@ -1,4 +1,6 @@
-const API = '/api/lessons';
+import { API_BASE_URL } from '../apiBase';
+
+const API = `${API_BASE_URL}/api/lessons`;
 
 export async function fetchLessons() {
   const res = await fetch(API);
