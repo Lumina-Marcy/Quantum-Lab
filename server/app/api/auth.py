@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -14,6 +15,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -165,6 +167,7 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except SQLAlchemyError:
+        logger.exception("Database error during registration")
         db.rollback()
         raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
 
@@ -187,6 +190,7 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except SQLAlchemyError:
+        logger.exception("Database error during login")
         raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
 
 
@@ -210,6 +214,7 @@ def delete_account(
         db.commit()
         return {"message": "Account deleted successfully"}
     except SQLAlchemyError:
+        logger.exception("Database error during account deletion")
         db.rollback()
         raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
 
@@ -260,5 +265,6 @@ def patch_account(
     except HTTPException:
         raise
     except SQLAlchemyError:
+        logger.exception("Database error during account update")
         db.rollback()
         raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
