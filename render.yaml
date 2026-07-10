@@ -9,9 +9,3 @@ services:
         sync: false
       - key: SECRET_KEY
         sync: false
-      - key: CORS_ORIGINS
-        value: http://localhost:5173
-        # Frontend and API are served from the same origin in this combined
-        # deploy, so CORS doesn't come into play in production — this only
-        # matters if you run the frontend's Vite dev server against a
-        # deployed backend.
