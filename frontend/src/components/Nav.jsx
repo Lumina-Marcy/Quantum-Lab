@@ -1,5 +1,14 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+const NAV_LINKS = [
+  { to: '/', label: 'Home' },
+  { to: '/missions', label: 'Missions' },
+  { to: '/sandbox', label: 'Sandbox' },
+  { to: '/resources', label: 'Resources' },
+];
+
+const SOON_LINKS = ['Learn', 'About'];
 
 function Nav() {
   const { user, logout } = useAuth();
@@ -11,14 +20,36 @@ function Nav() {
   };
 
   return (
-    <nav className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-      <div className="flex items-center gap-6">
-        <Link to="/" className="text-lg font-bold text-white tracking-tight">
-          Quantum Lab
-        </Link>
-        <Link to="/resources" className="text-sm text-slate-300 transition hover:text-white">
-          Resources
-        </Link>
+    <nav className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 px-6 py-4">
+      <Link to="/" className="text-lg font-bold tracking-tight text-white">
+        ⚛ Quantum Lab
+      </Link>
+
+      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+        {NAV_LINKS.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.to === '/'}
+            className={({ isActive }) =>
+              `rounded-full px-3 py-1.5 text-sm transition ${
+                isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
+              }`
+            }
+          >
+            {link.label}
+          </NavLink>
+        ))}
+        {SOON_LINKS.map((label) => (
+          <span
+            key={label}
+            aria-disabled="true"
+            title="Coming soon"
+            className="cursor-not-allowed rounded-full px-3 py-1.5 text-sm text-slate-600"
+          >
+            {label}
+          </span>
+        ))}
       </div>
 
       <div className="flex items-center gap-4">
