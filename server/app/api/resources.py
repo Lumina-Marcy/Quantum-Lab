@@ -12,7 +12,7 @@ class LearningResources(BaseModel):
     topics: list[ResourceItem]
     glossary: list[str]
 
-@router.get("/", response_model=LearningResources)
+@router.get("", response_model=LearningResources)
 def get_resources():
     return LearningResources(
         intro="Learn quantum computing basics through visual stories and simulations.",
