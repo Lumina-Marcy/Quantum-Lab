@@ -4,6 +4,7 @@ import WaveSuperposition from './WaveSuperposition';
 import QuantumGates from './QuantumGates';
 import Entanglement from './Entanglement';
 import Interference from './Interference';
+import ShorsAlgorithm from './ShorsAlgorithm';
 
 const interactives = {
   'bloch-sphere': BlochSphere,
@@ -12,6 +13,7 @@ const interactives = {
   'quantum-gates': QuantumGates,
   entanglement: Entanglement,
   interference: Interference,
+  shors: ShorsAlgorithm,
 };
 
 export function getInteractive(key) {

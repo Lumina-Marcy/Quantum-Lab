@@ -1,0 +1,9 @@
+{
+  "id": "shors-algorithm",
+  "title": "Shor's Algorithm",
+  "category": "Methods",
+  "summary": "Multiplying two primes is easy, but splitting the result back into its factors isn't — unless you have a quantum computer. Try both directions yourself and watch Shor's algorithm find the factors that classical computers can only guess at.",
+  "videoId": "REPLACE_WITH_YOUTUBE_VIDEO_ID",
+  "links": [],
+  "interactive": "shors"
+}
