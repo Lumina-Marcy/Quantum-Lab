@@ -53,7 +53,7 @@ function PasswordStrengthCoach({ password, username, email }) {
 const missionData = {
   1: {
     title: 'Password Vault',
-    summary: 'Learn how encryption works and why quantum computing challenges current security systems.',
+    summary: 'A quantum computer has already cracked your password. Triage which accounts you can still save before the attacker gets to them.',
   },
   2: {
     title: 'Find the Exit',
@@ -102,7 +102,8 @@ function UserDataForm({ profile, setProfile }) {
       <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Your Data</p>
       <h2 className="mt-2 text-2xl font-semibold text-white">What's at Stake</h2>
       <p className="mt-2 text-slate-400">
-        Enter sample personal information below. This data will be used throughout the mission to make the cybersecurity risks feel real and personal.
+        Enter sample personal information below. This mission opens with this password already cracked — the accounts
+        it protects are what you'll be fighting to save.
       </p>
 
       {!user ? (
