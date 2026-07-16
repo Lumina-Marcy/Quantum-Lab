@@ -6,7 +6,6 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import QuantumCore from '../components/QuantumCore';
 import { markOnboardingComplete } from '../utils/onboardingState';
 
-const API = '/api/auth';
 const REQUIRED_FIELDS = ['first_name', 'last_name', 'email', 'password'];
 // Same escalation the login flows use — a wrong/invalid submission reads as visible instability
 // that eases off, rather than a flat error state.

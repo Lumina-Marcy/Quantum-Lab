@@ -6,7 +6,6 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import QuantumCore from '../components/QuantumCore';
 import { markOnboardingComplete } from '../utils/onboardingState';
 
-const API = '/api/auth';
 const FIELDS = ['email', 'password'];
 import { API_BASE_URL } from '../apiBase';
 import { consumeSessionExpiredMessage } from '../authFetch';
