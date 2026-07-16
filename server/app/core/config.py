@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     cors_origins: str = "http://localhost:5173"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.1-flash-lite"
 
     model_config = {"env_file": ".env"}
 

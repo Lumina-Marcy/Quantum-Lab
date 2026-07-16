@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from jose import JWTError, jwt
@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 _ALGORITHM = "HS256"
-_TOKEN_EXPIRE_HOURS = 24
+
+RememberMeOption = Literal["1_day", "1_week", "1_month"]
+_REMEMBER_ME_HOURS: dict[str, int] = {"1_day": 24, "1_week": 24 * 7, "1_month": 24 * 30}
 
 
 class RegisterRequest(BaseModel):
@@ -64,6 +66,8 @@ class PatchAccountRequest(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     email: Optional[EmailStr] = None
+    remember_me: Optional[RememberMeOption] = None
+    current_password: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -89,8 +93,13 @@ class UserResponse(BaseModel):
     username: str
     email: str
     username_changed_at: Optional[datetime] = None
+    remember_me: str
 
     model_config = {"from_attributes": True}
+
+
+class DeleteAccountRequest(BaseModel):
+    current_password: str
 
 
 def _hash_password(password: str) -> str:
@@ -101,8 +110,16 @@ def _verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def _create_token(user_id: int, email: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=_TOKEN_EXPIRE_HOURS)
+def _require_current_password(user: User, current_password: Optional[str]) -> None:
+    if not current_password:
+        raise HTTPException(status_code=422, detail="Current password is required to make this change.")
+    if not _verify_password(current_password, user.password_hash):
+        raise HTTPException(status_code=403, detail="Current password is incorrect.")
+
+
+def _create_token(user_id: int, email: str, remember_me: str) -> str:
+    hours = _REMEMBER_ME_HOURS.get(remember_me, _REMEMBER_ME_HOURS["1_day"])
+    expire = datetime.now(timezone.utc) + timedelta(hours=hours)
     return jwt.encode(
         {"sub": str(user_id), "email": email, "exp": expire},
         settings.secret_key,
@@ -185,7 +202,8 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
             "last_name": user.last_name,
             "username": user.username,
             "email": user.email,
-            "token": _create_token(user.user_id, user.email),
+            "remember_me": user.remember_me,
+            "token": _create_token(user.user_id, user.email, user.remember_me),
         }
     except HTTPException:
         raise
@@ -206,10 +224,12 @@ def get_me(current_user: User = Depends(_get_current_user)):
 
 @router.delete("/account", status_code=200)
 def delete_account(
+    payload: DeleteAccountRequest,
     current_user: User = Depends(_get_current_user),
     db: Session = Depends(get_db),
 ):
     try:
+        _require_current_password(current_user, payload.current_password)
         db.delete(current_user)
         db.commit()
         return {"message": "Account deleted successfully"}
@@ -219,14 +239,23 @@ def delete_account(
         raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
 
 
-@router.patch("/account", response_model=UserResponse)
+@router.patch("/account")
 def patch_account(
     payload: PatchAccountRequest,
     current_user: User = Depends(_get_current_user),
     db: Session = Depends(get_db),
 ):
-    if payload.username is None and payload.password is None and payload.email is None:
+    if (
+        payload.username is None
+        and payload.password is None
+        and payload.email is None
+        and payload.remember_me is None
+    ):
         raise HTTPException(status_code=422, detail="Provide at least one field to update")
+
+    needs_confirmation = payload.username is not None or payload.password is not None or payload.email is not None
+    if needs_confirmation:
+        _require_current_password(current_user, payload.current_password)
 
     try:
         if payload.username is not None:
@@ -259,9 +288,21 @@ def patch_account(
                 raise HTTPException(status_code=409, detail="That email is already in use")
             current_user.email = payload.email
 
+        if payload.remember_me is not None:
+            current_user.remember_me = payload.remember_me
+
         db.commit()
         db.refresh(current_user)
-        return current_user
+        return {
+            "user_id": current_user.user_id,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
+            "username": current_user.username,
+            "email": current_user.email,
+            "username_changed_at": current_user.username_changed_at,
+            "remember_me": current_user.remember_me,
+            "token": _create_token(current_user.user_id, current_user.email, current_user.remember_me),
+        }
     except HTTPException:
         raise
     except SQLAlchemyError:
