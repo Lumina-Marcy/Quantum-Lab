@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import QuantumCore from '../components/QuantumCore';
 
 const buildLines = (username, email) => [
   { id: 1, delay: 500,  text: '> Initializing Grover\'s Algorithm...', cls: 'text-green-400' },
@@ -185,7 +186,10 @@ function OutcomeTerminal({ option, username }) {
             transition={{ duration: 0.4 }}
             className="mt-6 rounded-2xl border border-emerald-500/50 bg-emerald-950/30 p-6"
           >
-            <p className="text-center text-xs uppercase tracking-widest text-emerald-400">{consequence.verdict}</p>
+            <div className="flex items-center justify-center gap-2">
+              <QuantumCore stage="stabilizing" className="h-7 w-7" particleCount={6} detail="minimal" />
+              <p className="text-center text-xs uppercase tracking-widest text-emerald-400">{consequence.verdict}</p>
+            </div>
             <p className="mt-1 text-center text-sm font-semibold text-emerald-200">{consequence.concept}</p>
             <p className="mt-4 text-sm leading-relaxed text-slate-300">{consequence.explanation}</p>
           </motion.div>
@@ -235,6 +239,12 @@ function PasswordMission() {
 
   return (
     <main className="min-h-screen bg-slate-950">
+      {/* Persistent across every phase (sits outside the AnimatePresence swap below) — the
+          mission's own small mark of the same Quantum Core seen throughout the rest of the app. */}
+      <div className="flex items-center justify-center gap-2 border-b border-slate-800/60 py-3">
+        <QuantumCore stage="alive" className="h-5 w-5" particleCount={5} detail="minimal" />
+        <span className="font-mono text-xs uppercase tracking-[0.3em] text-slate-500">Password Vault</span>
+      </div>
       <AnimatePresence mode="wait">
         {phase === 'breaching' || phase === 'breached' ? (
           <motion.div

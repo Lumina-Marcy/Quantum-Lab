@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const API = '/api/auth';
 
@@ -144,8 +145,9 @@ export default function Settings() {
           <button
             onClick={() => patch('username', { username })}
             disabled={usernameLocked || loading.username}
-            className="mt-4 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
+            className="mt-4 flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
           >
+            {loading.username && <LoadingSpinner />}
             {loading.username ? 'Saving…' : 'Save username'}
           </button>
         </Section>
@@ -170,8 +172,9 @@ export default function Settings() {
           <button
             onClick={() => { patch('password', { password }); setPassword(''); }}
             disabled={loading.password}
-            className="mt-4 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
+            className="mt-4 flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
           >
+            {loading.password && <LoadingSpinner />}
             {loading.password ? 'Saving…' : 'Save password'}
           </button>
         </Section>
@@ -195,8 +198,9 @@ export default function Settings() {
           <button
             onClick={() => patch('email', { email })}
             disabled={loading.email}
-            className="mt-4 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
+            className="mt-4 flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
           >
+            {loading.email && <LoadingSpinner />}
             {loading.email ? 'Saving…' : 'Save email'}
           </button>
         </Section>
@@ -221,8 +225,9 @@ export default function Settings() {
               <button
                 onClick={handleDeleteAccount}
                 disabled={loading.delete}
-                className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
+                className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-50"
               >
+                {loading.delete && <LoadingSpinner />}
                 {loading.delete ? 'Deleting…' : 'Yes, delete it'}
               </button>
               <button
