@@ -148,7 +148,48 @@ function Sandbox() {
             </div>
           )}
         </div>
-      </motion.section>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, delay: 0.15, ease: 'easeOut' }}
+        className="my-16 flex justify-center"
+      >
+        <SandboxCore boosted={hoveredCard} />
+      </motion.div>
+
+      <div className="grid gap-5 sm:grid-cols-3">
+        {SIMULATIONS.map(({ key, icon: Icon, title, copy }, i) => (
+          <motion.div
+            key={key}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 * i, ease: 'easeOut' }}
+            onHoverStart={() => setHoveredCard(true)}
+            onHoverEnd={() => setHoveredCard(false)}
+            whileHover={{ y: -4 }}
+          >
+            <Panel className="h-full p-6 transition-colors duration-300 hover:border-quantum-cyan/40">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-quantum-cyan/30 bg-quantum-cyan/10">
+                <Icon />
+              </div>
+              <h2 className="mt-4 font-display text-xl font-semibold text-white">{title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-400">{copy}</p>
+            </Panel>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="mt-16 flex justify-center">
+        <Button onClick={() => setModalOpen(true)} variant="primary">
+          Begin Experiment
+        </Button>
+      </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Still Calibrating">
+        <p>Quantum Sandbox is currently under construction. Our simulations are still being calibrated. Check back soon.</p>
+      </Modal>
     </main>
   );
 }

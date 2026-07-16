@@ -7,6 +7,7 @@ import VaultIcon from '../components/VaultIcon';
 import VaultInput from '../components/VaultInput';
 import SensitivityMeter from '../components/SensitivityMeter';
 import MissionPreviewCard from '../components/MissionPreviewCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { MISSIONS } from '../data/missions';
 
 const EMPTY_FORM = { username: '', email: '', password: '', fullName: '', address: '', bankName: '', accountNumber: '' };
@@ -242,11 +243,7 @@ function UserDataForm({ profile, setProfile }) {
               >
                 {securing ? (
                   <>
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                      className="inline-block h-4 w-4 rounded-full border-2 border-slate-950/40 border-t-slate-950"
-                    />
+                    <LoadingSpinner />
                     Securing...
                   </>
                 ) : (
