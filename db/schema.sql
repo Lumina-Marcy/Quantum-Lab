@@ -13,11 +13,14 @@ CREATE TABLE IF NOT EXISTS users (
     email               VARCHAR     NOT NULL UNIQUE,
     password_hash       TEXT        NOT NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    username_changed_at TIMESTAMPTZ
+    username_changed_at TIMESTAMPTZ,
+    remember_me         VARCHAR     NOT NULL DEFAULT '1_day'
 );
 
 -- Migration: run this if the table already exists
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS remember_me VARCHAR NOT NULL DEFAULT '1_day';
+-- ALTER TABLE users ADD CONSTRAINT users_remember_me_check CHECK (remember_me IN ('1_day', '1_week', '1_month'));
 
 -- ──────────────────────────────────────────────
 -- 2. missions

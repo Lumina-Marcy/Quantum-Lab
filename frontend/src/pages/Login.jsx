@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../apiBase';
+import { consumeSessionExpiredMessage } from '../authFetch';
 
 const API = `${API_BASE_URL}/api/auth`;
 
@@ -12,6 +13,11 @@ function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const message = consumeSessionExpiredMessage();
+    if (message) setError(message);
+  }, []);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
