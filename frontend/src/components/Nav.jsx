@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/missions', label: 'Mission Control' },
   { to: '/sandbox', label: 'Sandbox' },
+  { to: '/resources', label: 'Resources' },
 ];
 
 const SOON_LINKS = ['Resources'];

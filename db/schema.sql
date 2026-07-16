@@ -13,11 +13,14 @@ CREATE TABLE IF NOT EXISTS users (
     email               VARCHAR     NOT NULL UNIQUE,
     password_hash       TEXT        NOT NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    username_changed_at TIMESTAMPTZ
+    username_changed_at TIMESTAMPTZ,
+    remember_me         VARCHAR     NOT NULL DEFAULT '1_day'
 );
 
 -- Migration: run this if the table already exists
 -- ALTER TABLE users ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS remember_me VARCHAR NOT NULL DEFAULT '1_day';
+-- ALTER TABLE users ADD CONSTRAINT users_remember_me_check CHECK (remember_me IN ('1_day', '1_week', '1_month'));
 
 -- ──────────────────────────────────────────────
 -- 2. missions
@@ -67,4 +70,21 @@ CREATE TABLE IF NOT EXISTS sandbox_runs (
     classical_steps   INTEGER NOT NULL,
     quantum_steps     INTEGER NOT NULL,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ──────────────────────────────────────────────
+-- 6. lessons
+-- ──────────────────────────────────────────────
+-- id is a human-readable slug (e.g. 'what-is-a-qubit'), not a SERIAL, so it can
+-- be used directly in the /resources/:id frontend route with no lookup table.
+CREATE TABLE IF NOT EXISTS lessons (
+    id          VARCHAR PRIMARY KEY,
+    title       VARCHAR     NOT NULL,
+    category    VARCHAR     NOT NULL,
+    summary     TEXT        NOT NULL,
+    video_id    VARCHAR     NOT NULL,
+    duration    VARCHAR,
+    links       JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    interactive VARCHAR,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );

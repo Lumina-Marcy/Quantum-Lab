@@ -13,6 +13,8 @@ import LearnWhy from './pages/LearnWhy';
 import VisualizeMore from './pages/VisualizeMore';
 import Sandbox from './pages/Sandbox';
 import Settings from './pages/Settings';
+import Resources from './pages/Resources';
+import ResourceDetail from './pages/ResourceDetail';
 import NotFound from './pages/NotFound';
 
 // Every route gets the shared space backdrop for a cohesive feel, except the two that already
@@ -47,6 +49,8 @@ function App() {
             <Route path="/mission/1/learn-why" element={<LearnWhy />} />
             <Route path="/mission/1/visualize" element={<VisualizeMore />} />
             <Route path="/sandbox" element={<Sandbox />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/resources/:id" element={<ResourceDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

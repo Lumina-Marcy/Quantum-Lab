@@ -14,6 +14,9 @@ const INSTABILITY_HOLD_MS = { 1: 1300, 2: 2400 };
 // How long the "noticed a field" flicker holds before settling back to `alive` — long enough for
 // the loading stage's contract-then-expand keyframe (QuantumCore.jsx, ~1.3s) to actually play out.
 const FIELD_REACTION_MS = 1400;
+import { API_BASE_URL } from '../apiBase';
+
+const API = `${API_BASE_URL}/api/auth`;
 
 /**
  * The standalone `/register` page — same Core-as-feedback language as Login.jsx and the
@@ -87,7 +90,7 @@ function Register() {
         setFailedAttempts((n) => n + 1);
         return;
       }
-      const loginRes = await fetch('/api/auth/login', {
+      const loginRes = await fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password }),

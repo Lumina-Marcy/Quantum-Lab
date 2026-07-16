@@ -8,6 +8,10 @@ import { markOnboardingComplete } from '../utils/onboardingState';
 
 const API = '/api/auth';
 const FIELDS = ['email', 'password'];
+import { API_BASE_URL } from '../apiBase';
+import { consumeSessionExpiredMessage } from '../authFetch';
+
+const API = `${API_BASE_URL}/api/auth`;
 
 // Same escalation as the homepage's AuthenticationScene.jsx — 1st wrong attempt is a brief
 // flicker, 2nd holds longer, 3rd+ stays visibly unstable until it either succeeds or resets.
@@ -59,6 +63,11 @@ function Login() {
     filledCountRef.current = filledCount;
     return undefined;
   }, [form]);
+
+  useEffect(() => {
+    const message = consumeSessionExpiredMessage();
+    if (message) setError(message);
+  }, []);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 

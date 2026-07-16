@@ -3,8 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { API_BASE_URL } from '../apiBase';
+import { authFetch } from '../authFetch';
 
-const API = '/api/auth';
+const API = `${API_BASE_URL}/api/auth`;
+
+const REMEMBER_ME_OPTIONS = [
+  { value: '1_day', label: '1 day' },
+  { value: '1_week', label: '1 week' },
+  { value: '1_month', label: '1 month' },
+];
 
 function daysUntilUsernameChange(username_changed_at) {
   if (!username_changed_at) return 0;
@@ -35,6 +43,20 @@ function Field({ label, children }) {
 const inputClass =
   'w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-slate-100 placeholder-slate-500 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 disabled:opacity-40';
 
+function CurrentPasswordField({ value, onChange }) {
+  return (
+    <Field label="Current password">
+      <input
+        type="password"
+        value={value}
+        onChange={onChange}
+        placeholder="Confirm with your current password"
+        className={inputClass}
+      />
+    </Field>
+  );
+}
+
 export default function Settings() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
@@ -43,21 +65,26 @@ export default function Settings() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [rememberMe, setRememberMe] = useState('1_day');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const [messages, setMessages] = useState({ username: '', password: '', email: '', delete: '' });
-  const [loading, setLoading] = useState({ username: false, password: false, email: false, delete: false });
+  const [currentPasswordUsername, setCurrentPasswordUsername] = useState('');
+  const [currentPasswordPassword, setCurrentPasswordPassword] = useState('');
+  const [currentPasswordEmail, setCurrentPasswordEmail] = useState('');
+  const [currentPasswordDelete, setCurrentPasswordDelete] = useState('');
 
-  const token = localStorage.getItem('token');
+  const [messages, setMessages] = useState({ username: '', password: '', email: '', rememberMe: '', delete: '' });
+  const [loading, setLoading] = useState({ username: false, password: false, email: false, rememberMe: false, delete: false });
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
-    fetch(`${API}/me`, { headers: { Authorization: `Bearer ${token}` } })
+    authFetch(`${API}/me`)
       .then(r => r.json())
       .then(data => {
         setProfile(data);
         setUsername(data.username);
         setEmail(data.email);
+        setRememberMe(data.remember_me);
       });
   }, []);
 
@@ -68,15 +95,15 @@ export default function Settings() {
     setMsg(key, '');
     setLoad(key, true);
     try {
-      const res = await fetch(`${API}/account`, {
+      const res = await authFetch(`${API}/account`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) { setMsg(key, data.detail || 'Something went wrong'); return; }
       setProfile(data);
-      login({ user_id: data.user_id, first_name: data.first_name, last_name: data.last_name, username: data.username, email: data.email }, token);
+      login({ user_id: data.user_id, first_name: data.first_name, last_name: data.last_name, username: data.username, email: data.email }, data.token);
       setMsg(key, 'success');
     } catch {
       setMsg(key, 'Could not reach the server');
@@ -89,17 +116,23 @@ export default function Settings() {
     setMsg('delete', '');
     setLoad('delete', true);
     try {
-      const res = await fetch(`${API}/account`, {
+      const res = await authFetch(`${API}/account`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: currentPasswordDelete }),
       });
-      if (!res.ok) { setMsg('delete', 'Failed to delete account'); return; }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setMsg('delete', data.detail || 'Failed to delete account');
+        return;
+      }
       logout();
       navigate('/');
     } catch {
       setMsg('delete', 'Could not reach the server');
     } finally {
       setLoad('delete', false);
+      setCurrentPasswordDelete('');
     }
   };
 
@@ -142,8 +175,17 @@ export default function Settings() {
           {messages.username === 'success' && (
             <p className="mt-2 text-sm text-green-400">Username updated.</p>
           )}
+          <div className="mt-4">
+            <CurrentPasswordField
+              value={currentPasswordUsername}
+              onChange={e => setCurrentPasswordUsername(e.target.value)}
+            />
+          </div>
           <button
-            onClick={() => patch('username', { username })}
+            onClick={() => {
+              patch('username', { username, current_password: currentPasswordUsername });
+              setCurrentPasswordUsername('');
+            }}
             disabled={usernameLocked || loading.username}
             className="mt-4 flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
           >
@@ -169,8 +211,18 @@ export default function Settings() {
           {messages.password === 'success' && (
             <p className="mt-2 text-sm text-green-400">Password updated.</p>
           )}
+          <div className="mt-4">
+            <CurrentPasswordField
+              value={currentPasswordPassword}
+              onChange={e => setCurrentPasswordPassword(e.target.value)}
+            />
+          </div>
           <button
-            onClick={() => { patch('password', { password }); setPassword(''); }}
+            onClick={() => {
+              patch('password', { password, current_password: currentPasswordPassword });
+              setPassword('');
+              setCurrentPasswordPassword('');
+            }}
             disabled={loading.password}
             className="mt-4 flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
           >
@@ -195,13 +247,53 @@ export default function Settings() {
           {messages.email === 'success' && (
             <p className="mt-2 text-sm text-green-400">Email updated.</p>
           )}
+          <div className="mt-4">
+            <CurrentPasswordField
+              value={currentPasswordEmail}
+              onChange={e => setCurrentPasswordEmail(e.target.value)}
+            />
+          </div>
           <button
-            onClick={() => patch('email', { email })}
+            onClick={() => {
+              patch('email', { email, current_password: currentPasswordEmail });
+              setCurrentPasswordEmail('');
+            }}
             disabled={loading.email}
             className="mt-4 flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
           >
             {loading.email && <LoadingSpinner />}
             {loading.email ? 'Saving…' : 'Save email'}
+          </button>
+        </Section>
+
+        {/* Session duration */}
+        <Section title="Stay signed in">
+          <Field label="Keep me logged in for">
+            <select
+              value={rememberMe}
+              onChange={e => setRememberMe(e.target.value)}
+              className={inputClass}
+            >
+              {REMEMBER_ME_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </Field>
+          <p className="mt-2 text-xs text-slate-500">
+            Applies immediately to this session, and to future logins.
+          </p>
+          {messages.rememberMe && messages.rememberMe !== 'success' && (
+            <p className="mt-2 text-sm text-red-400">{messages.rememberMe}</p>
+          )}
+          {messages.rememberMe === 'success' && (
+            <p className="mt-2 text-sm text-green-400">Session duration updated.</p>
+          )}
+          <button
+            onClick={() => patch('rememberMe', { remember_me: rememberMe })}
+            disabled={loading.rememberMe}
+            className="mt-4 rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-40"
+          >
+            {loading.rememberMe ? 'Saving…' : 'Save session duration'}
           </button>
         </Section>
 
@@ -221,7 +313,12 @@ export default function Settings() {
               Delete my account
             </button>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="space-y-4">
+              <CurrentPasswordField
+                value={currentPasswordDelete}
+                onChange={e => setCurrentPasswordDelete(e.target.value)}
+              />
+              <div className="flex items-center gap-3">
               <button
                 onClick={handleDeleteAccount}
                 disabled={loading.delete}
@@ -231,11 +328,12 @@ export default function Settings() {
                 {loading.delete ? 'Deleting…' : 'Yes, delete it'}
               </button>
               <button
-                onClick={() => setConfirmDelete(false)}
+                onClick={() => { setConfirmDelete(false); setCurrentPasswordDelete(''); }}
                 className="text-sm text-slate-400 hover:text-slate-300"
               >
                 Cancel
               </button>
+              </div>
             </div>
           )}
         </Section>
