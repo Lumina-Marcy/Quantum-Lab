@@ -9,10 +9,10 @@ const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/missions', label: 'Mission Control' },
   { to: '/sandbox', label: 'Sandbox' },
-  { to: '/resources', label: 'Resources' },
+  { to: '/resources', label: 'Learn' },
 ];
 
-const SOON_LINKS = ['Resources'];
+const SOON_LINKS = [];
 
 /**
  * Hidden until the homepage's entry gate resolves — the nav appearing is part of "Quantum Lab
