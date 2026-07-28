@@ -160,3 +160,151 @@ Another casualty of the same Maze Search merge that broke `Mission.jsx`'s build:
 route itself had been dropped from `App.jsx` entirely, even though `MoleculeMission` was still
 imported. With no matching route, clicking "Start Mission" on Lost Medical Breakthrough fell through
 to the `*` wildcard and landed on the 404 page. Re-added the route.
+
+## 2026-07-28 — New mission: The Supply Chain Crisis ("Reroute the Network")
+
+Mission 4 flipped from `'coming-soon'` to `'available'`, with a full new mission page at
+`/mission/4/play` — see [`docs/SUPPLY_CHAIN_MISSION.md`](SUPPLY_CHAIN_MISSION.md) for the full
+writeup. Directly reuses Lost Medical Breakthrough's (Mission 3) phase flow and mechanics (catch-and-
+combine, deterministic scoring, Grover's-style reveal), reskinned as a logistics-routing puzzle
+instead of a molecular-synthesis one. An earlier attempt at this mission (a drag-and-drop "Warehouse
+Chaos" design with a manual-chaos timer) was abandoned and fully deleted after its timer-to-outcome
+transition repeatedly failed in the browser; this version sidesteps that entire class of bug by
+reusing Molecule Mission's proven single-`async`-effect pattern for its auto-playing phase instead
+of an interval-plus-threshold timer.
+
+## 2026-07-28 — Supply Chain Crisis: gameplay and outcome screens stripped to just navigation
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | `PlanningPhase` reduced to a single "Run the Quantum AI Optimizer" button              |
+| `frontend/src/pages/SupplyChainMission.jsx` | `OutcomePhase` reduced to just the "Run It Back" / "Finish Mission" buttons            |
+| `frontend/src/pages/SupplyChainMission.jsx` | Removed all now-dead code that only existed to support the removed content (floating nodes, manifest, guide bubble, verdict text, lesson panel) |
+
+The interactive route-building mechanic, tutorial guide bubble, and lesson/reveal content are gone;
+each phase is now just the button(s) needed to move to the next one. The Grover's-style amplitude
+reveal between the two (`OptimizingPhase`) is untouched.
+
+## 2026-07-28 — Supply Chain Crisis: rebuilt gameplay as "Warehouse Chaos"
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | Gameplay phase rebuilt into a 60-second drag-and-drop scheduling minigame (`ChaosPhase`) |
+| `frontend/src/pages/SupplyChainMission.jsx` | New `UnlockPhase` notification screen between the chaos round and the Quantum Optimizer |
+| `frontend/src/pages/SupplyChainMission.jsx` | `OutcomePhase` now shows a real before/after metrics table plus a learning paragraph, instead of bare buttons |
+
+Full design writeup, including the specific fixes for every failure mode from the original (deleted)
+Warehouse Chaos attempt, in [`docs/SUPPLY_CHAIN_MISSION.md`](SUPPLY_CHAIN_MISSION.md). The existing
+Grover's-style amplitude reveal (`OptimizingPhase`'s candidates/amplitudes/oracle-diffusion effect)
+was explicitly left unmodified — the chaos minigame only feeds it real "before" metrics and adds a
+themed preroll in front of it, per instruction not to let the rebuild override that working logic.
+Verified via `npx vite build` and a standalone Node simulation of the round's per-second reducer
+across both an efficient-player and a does-nothing-player scenario; not verified in an actual browser
+(no headless browser available in this sandbox).
+
+## 2026-07-28 (later same day) — Supply Chain Crisis: cut leftover route-scoring algorithm, orders now cost workers
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | Removed the S/W/D/C route-scoring system (`OPTIMAL_ROUTE`, `scoreFor`, `buildCandidates`, etc.) — disconnected leftover flavor, not the algorithm the mission teaches |
+| `frontend/src/pages/SupplyChainMission.jsx` | `workersRequired(qty)` — bigger orders now need up to 3 workers to assign, refunded correctly on completion/lateness/mismatch |
+| `frontend/src/pages/SupplyChainMission.jsx` | Board scaled up: `DOCK_COUNT` 4→6, `WORKER_POOL` 6→10, `ROBOT_POOL` 3→4, 3-column dock grid |
+
+The Grover's-style amplitude reveal itself (oracle/diffusion math) was kept — it's the actual
+algorithm the mission demonstrates — just simplified to amplify toward a randomly chosen generic
+"Plan" label instead of a scored route code that never corresponded to anything in the warehouse
+simulation. See [`docs/SUPPLY_CHAIN_MISSION.md`](SUPPLY_CHAIN_MISSION.md) for the full writeup,
+including the worker-accounting invariant verified via Node simulation across 30 runs.
+
+## 2026-07-28 (fourth same-day pass) — cut the amplitude-bars reveal, straight to outcome
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | Removed `OptimizingPhase` (the amplitude-bars step) and its dead supporting code (Grover helpers, `buildScheduleLabels`, `CANDIDATE_SLOTS`, `sleep`, `TRUCK_POOL`) |
+| `frontend/src/pages/SupplyChainMission.jsx` | `UnlockPhase`'s button now advances directly from `'unlocked'` to `'outcome'`         |
+
+The mission now goes intro → 60s Warehouse Chaos → "Quantum Optimizer Available" notification →
+"Optimized Schedule Deployed" outcome, with no intervening visualization step.
+
+## 2026-07-28 (fifth same-day pass) — conveyor jam pulls a worker, faster orders, pre-round tutorial
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | The `jam` event now also pulls one worker off the floor for `JAM_REPAIR_S` (6s), on top of its existing dock-delay effect |
+| `frontend/src/pages/SupplyChainMission.jsx` | Order spawn cadence tightened from every 3–6s to every 2–4s                            |
+| `frontend/src/pages/SupplyChainMission.jsx` | New `TutorialPhase` — a 5-step walkthrough between the intro and the chaos round; the 60s timer only starts once the player clicks through it and hits "Start Warehouse Shift" |
+
+The tutorial is a plain step-through screen, not an overlay inside the chaos round itself — `ChaosPhase`
+(and its round-ending timer) only mounts once the tutorial hands off, so there was no need to gate or
+delay anything inside the timer logic itself. Replaying via "Run It Back" skips both the intro and the
+tutorial and goes straight back into a fresh chaos round, so the walkthrough is only ever shown once
+per visit to the mission. See [`docs/SUPPLY_CHAIN_MISSION.md`](SUPPLY_CHAIN_MISSION.md) for the full
+writeup, including the updated worker-accounting invariant (now `used + free + repairing === pool`)
+verified via Node simulation.
+
+## 2026-07-28 (sixth same-day pass) — traffic delay now freezes all dock progress
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | `traffic` event no longer just adds `+3s` to active docks — it stalls *all* dock progress for `TRAFFIC_FREEZE_S` (4s) via a global `freezeUntil` timestamp |
+
+Order deadlines keep ticking down the whole time it's frozen, so this is a real setback rather than
+a pause — trucks are stuck, but customers still expect their delivery on time. A `🚦 All docks
+stalled Xs` indicator shows in the status bar for the duration. Verified with an isolated Node
+simulation of the freeze window: dock progress never advances during the freeze, deadlines tick down
+every single second regardless, and progress resumes correctly the instant the freeze expires.
+
+## 2026-07-28 (seventh same-day pass) — re-added a quantum simulation step before the outcome
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | New `SimulationPhase` — sits between `'unlocked'` and `'outcome'`, showing a live "schedules evaluated" counter and "best satisfaction" readout converging over ~3.8s |
+
+Earlier the same day, the amplitude-bars reveal (`OptimizingPhase`) was cut entirely so `'unlocked'`
+went straight to `'outcome'` — that turned out to remove more than intended. `SimulationPhase` puts a
+visualization back in that spot: a scripted, eased progression from 0 to `POSSIBLE_SCHEDULES`
+evaluated and from 4% to 97% satisfaction, driven by the same single-`async`-effect-with-`sleep()`
+pattern used elsewhere in this mission and in Molecule Mission's `SearchingPhase` — it calls
+`onComplete()` directly at the end of that effect, never from inside a `setState` updater. Verified
+the eased math lands exactly on `POSSIBLE_SCHEDULES` / 97% at the final step via a standalone Node
+check, and confirmed the full build is clean.
+
+## 2026-07-28 (eighth same-day pass) — simulation now grounded in the comparison sheet's real numbers
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | `SimulationPhase` now animates a real `optimalIterations(POSSIBLE_SCHEDULES)` round count (1,963) instead of a decorative "schedules evaluated" number, and states the real classical-vs-quantum duration comparison |
+
+The round counter, `QUANTUM_ROUNDS` (1,963) and `CLASSICAL_CHECKS` (3,125,000), and the duration
+labels (`72.3 days` classical, `1.1 hrs` quantum) are computed with the exact same formula and rate
+assumption (2 sec/operation) as the "Supply Chain Crisis — Quantum vs Classical Scheduling Search"
+Google Sheet created earlier the same day — verified by a standalone Node check that all four figures
+match the sheet exactly. The on-screen animation still compresses this into ~3.8 seconds for
+gameplay pacing, but the duration text underneath states the real, uncompressed comparison so the
+compression itself is never presented as literal.
+
+## 2026-07-28 (ninth same-day pass) — Quantum AI Optimizer now shows a run-through and scaling table
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/SupplyChainMission.jsx` | Once the live round animation finishes, `SimulationPhase` now shows a 5-step "How the optimizer got there" run-through (superposition → oracle → diffusion → repeat → measure) and a 4-row scaling comparison table (100 / 10,000 / 1,000,000 / 6,250,000 schedules) |
+| `frontend/src/pages/SupplyChainMission.jsx` | The phase no longer auto-advances after a fixed delay — it now waits for a "Continue to Results →" button click, so there's no rush to read the new content |
+
+The scaling table's numbers are computed in-app with the exact same `optimalIterations` formula and
+2-sec/operation rate assumption as both the standalone comparison sheet and the earlier duration
+labels — verified all four rows match the sheet exactly (7.1x / 64.1x / 636.9x / 1,592.0x speedup).
+The comparison data is rendered directly in the app rather than linking out to the personal Google
+Sheet, since that file lives in one user's Drive and isn't something a deployed build's other
+visitors could open.
+
+## 2026-07-28 (tenth same-day pass) — shorter order deadlines
+
+| Priority  | Deadline before | Deadline after |
+| --------- | ---------------- | --------------- |
+| Express   | 22s              | 15s             |
+| High      | 32s              | 22s             |
+| Standard  | 48s              | 30s             |
+
+`PRIORITY_META.deadlineS` cut across the board (`frontend/src/pages/SupplyChainMission.jsx`), keeping
+each tier's deadline-to-handling-time ratio close to ~3x so orders stay winnable but with noticeably
+less slack before they go late.
