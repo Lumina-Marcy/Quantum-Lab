@@ -101,3 +101,8 @@ two-point interpolation's rotation axis is undefined.
 Added an intro paragraph explicitly defining a single-qubit gate ("acts on exactly one qubit... spins
 that qubit's Bloch-sphere arrow to a new position") and contrasting it with multi-qubit gates (e.g.
 CNOT), which can entangle qubits together in a way no single-qubit gate ever can alone.
+
+## 2026-07-23 — New mission: Lost Medical Breakthrough ("Build the Molecule")
+
+Mission 3 flipped from `'coming-soon'` to `'available'`, with a full new mission page at
+`/mission/3/play` — see [`docs/MOLECULE_MISSION.md`](MOLECULE_MISSION.md) for the full writeup.

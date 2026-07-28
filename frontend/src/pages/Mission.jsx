@@ -265,18 +265,22 @@ function Mission() {
   const navigate = useNavigate();
   const mission = MISSIONS.find((m) => m.id === id) || MISSIONS[0];
   const isPasswordMission = id === '1';
+  const isMoleculeMission = id === '3';
+  const isAvailable = mission.status === 'available';
 
   const [profile, setProfile] = useState(null);
 
   function handleStart() {
     if (isPasswordMission) {
       navigate('/mission/1/play', { state: profile });
+    } else if (isMoleculeMission) {
+      navigate('/mission/3/play');
     }
   }
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-      <UserDataForm profile={profile} setProfile={setProfile} />
+      {isPasswordMission && <UserDataForm profile={profile} setProfile={setProfile} />}
 
       {isPasswordMission ? (
         <MissionPreviewCard mission={mission} onStart={handleStart} canStart={Boolean(profile)} />
@@ -310,9 +314,21 @@ function Mission() {
             <Link to="/" className="rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700">
               Back to Home
             </Link>
-            <button className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400">
-              Start Mission
-            </button>
+            {isAvailable ? (
+              <button
+                onClick={handleStart}
+                className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                Start Mission
+              </button>
+            ) : (
+              <button
+                disabled
+                className="cursor-not-allowed rounded-full bg-slate-800 px-5 py-3 font-semibold text-slate-500"
+              >
+                Coming Soon
+              </button>
+            )}
           </div>
         </motion.div>
       )}

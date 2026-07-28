@@ -25,7 +25,7 @@ export const MISSIONS = [
     summary: 'Somewhere in millions of molecular combinations is a cure. Find it before time runs out.',
     estimatedTime: '6 min',
     difficulty: 'Intermediate',
-    status: 'coming-soon',
+    status: 'available',
     terminalLines: ['Searching Molecular Structures...'],
   },
   {
