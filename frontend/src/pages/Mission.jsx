@@ -263,7 +263,7 @@ function UserDataForm({ profile, setProfile }) {
 // Missions with a working gameplay page — the map value is the route to launch into. Mission 1
 // additionally needs UserDataForm above (it seeds the vault the breach narration reads from);
 // other playable missions need no such setup step and can jump straight to a Start button.
-const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play' };
+const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play', 3: '/mission/3/play' };
 
 function Mission() {
   const { id } = useParams();
@@ -271,7 +271,6 @@ function Mission() {
   const mission = MISSIONS.find((m) => m.id === id) || MISSIONS[0];
   const isPasswordMission = id === '1';
   const playRoute = PLAYABLE_ROUTES[id];
-  const isMoleculeMission = id === '3';
   const isAvailable = mission.status === 'available';
 
   const [profile, setProfile] = useState(null);
@@ -279,10 +278,6 @@ function Mission() {
   function handleStart() {
     if (playRoute) {
       navigate(playRoute, { state: profile });
-    if (isPasswordMission) {
-      navigate('/mission/1/play', { state: profile });
-    } else if (isMoleculeMission) {
-      navigate('/mission/3/play');
     }
   }
 

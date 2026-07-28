@@ -26,9 +26,9 @@ function MissionHub() {
         className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 px-6 py-4 sm:flex-row"
       >
         <p className="text-sm text-slate-200">
-          <span aria-hidden="true">✨</span> New here? Start with the Password Vault mission.
+          <span aria-hidden="true">✨</span> New here? Start with the Lost Medical Breakthrough mission.
         </p>
-        <Button to="/mission/1" variant="primary" className="px-5 py-2.5 text-sm">
+        <Button to="/mission/3" variant="primary" className="px-5 py-2.5 text-sm">
           Start Mission
         </Button>
       </motion.div>

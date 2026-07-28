@@ -2,13 +2,13 @@
 // Mission Hub, and the per-mission onboarding page.
 export const MISSIONS = [
   {
-    id: '1',
-    title: 'Password Vault',
-    summary: "A quantum computer is trying to break into your vault. Can today's encryption survive tomorrow's technology?",
-    estimatedTime: '5 min',
+    id: '3',
+    title: 'Lost Medical Breakthrough',
+    summary: 'Somewhere in millions of molecular combinations is a cure. Find it before time runs out.',
+    estimatedTime: '~1 min',
     difficulty: 'Beginner',
     status: 'available',
-    terminalLines: ['Initializing...', 'Encryption Detected...', 'Threat Level: HIGH'],
+    terminalLines: ['Searching Molecular Structures...'],
   },
   {
     id: '2',
@@ -20,13 +20,13 @@ export const MISSIONS = [
     terminalLines: ['Search Space: 1,000,000 Paths', 'Quantum Advantage: Expected'],
   },
   {
-    id: '3',
-    title: 'Lost Medical Breakthrough',
-    summary: 'Somewhere in millions of molecular combinations is a cure. Find it before time runs out.',
-    estimatedTime: '6 min',
+    id: '1',
+    title: 'Password Vault',
+    summary: "A quantum computer is trying to break into your vault. Can today's encryption survive tomorrow's technology?",
+    estimatedTime: '5 min',
     difficulty: 'Intermediate',
     status: 'available',
-    terminalLines: ['Searching Molecular Structures...'],
+    terminalLines: ['Initializing...', 'Encryption Detected...', 'Threat Level: HIGH'],
   },
   {
     id: '4',

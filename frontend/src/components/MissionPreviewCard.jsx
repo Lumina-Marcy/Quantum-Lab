@@ -8,6 +8,8 @@ const FLOW_STEPS = [
   { icon: '⚛️', text: 'Explore quantum concepts' },
 ];
 
+const DIFFICULTY_ICONS = { Beginner: '🟢', Intermediate: '🟡', Advanced: '🔴' };
+
 /** Mission overview card: time/difficulty at a glance, the mission flow, and the Start CTA. */
 function MissionPreviewCard({ mission, onStart, canStart, lockedMessage = 'Secure your vault above to begin.' }) {
   return (
@@ -24,11 +26,13 @@ function MissionPreviewCard({ mission, onStart, canStart, lockedMessage = 'Secur
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl bg-slate-950/70 p-5">
           <p className="text-xs uppercase tracking-wide text-slate-500">Estimated Time</p>
-          <p className="mt-1 text-lg font-semibold text-cyan-200">⏱ 5–7 minutes</p>
+          <p className="mt-1 text-lg font-semibold text-cyan-200">⏱ {mission.estimatedTime}</p>
         </div>
         <div className="rounded-2xl bg-slate-950/70 p-5">
           <p className="text-xs uppercase tracking-wide text-slate-500">Difficulty</p>
-          <p className="mt-1 text-lg font-semibold text-cyan-200">🟢 Beginner Friendly</p>
+          <p className="mt-1 text-lg font-semibold text-cyan-200">
+            {DIFFICULTY_ICONS[mission.difficulty] ?? '🟢'} {mission.difficulty}
+          </p>
         </div>
       </div>
 

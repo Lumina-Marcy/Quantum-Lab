@@ -106,3 +106,46 @@ CNOT), which can entangle qubits together in a way no single-qubit gate ever can
 
 Mission 3 flipped from `'coming-soon'` to `'available'`, with a full new mission page at
 `/mission/3/play` — see [`docs/MOLECULE_MISSION.md`](MOLECULE_MISSION.md) for the full writeup.
+
+## 2026-07-23 — Fixed a broken Render deploy (merge artifact in `Mission.jsx`)
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/Mission.jsx`            | Fixed an unclosed `if` block in `handleStart` that broke the production build          |
+| `frontend/src/pages/Mission.jsx`            | Mission 3 folded into `PLAYABLE_ROUTES` alongside Missions 1 and 2                     |
+| `frontend/src/components/MissionPreviewCard.jsx` | Now reads `mission.estimatedTime` / `mission.difficulty` instead of hardcoded values |
+
+Render's build was failing with `Mission.jsx:351: Unexpected "export"` — a merge artifact where a
+new `playRoute`/`PLAYABLE_ROUTES` lookup (added alongside the new Maze Search mission) got merged in
+without removing the old `isPasswordMission`/`isMoleculeMission` branching it replaced, leaving an
+`if (playRoute) {` block that was never closed and swallowed the rest of the file. Removed the dead
+duplicate branch and closed the block properly.
+
+While fixing that, folded Mission 3 into `PLAYABLE_ROUTES` too, so all three playable missions (1, 2,
+3) now share the same `MissionPreviewCard` instead of Mission 3 using its own bespoke inline card.
+That surfaced a real bug the change would've otherwise exposed: `MissionPreviewCard` hardcoded
+"5–7 minutes" / "🟢 Beginner Friendly" for every mission regardless of its actual data (harmless
+coincidence for Mission 2, wrong for Mission 3) — fixed to read the mission's real `estimatedTime`
+and `difficulty` fields, with a difficulty→emoji map (🟢 Beginner, 🟡 Intermediate, 🔴 Advanced).
+
+## 2026-07-23 — Mission difficulty/time rebalance and reordering
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/data/missions.js`             | Password Vault difficulty: `Beginner` → `Intermediate`                                |
+| `frontend/src/data/missions.js`             | Lost Medical Breakthrough: `Intermediate` → `Beginner`, `6 min` → `~1 min`             |
+| `frontend/src/data/missions.js`             | Reordered `MISSIONS` — display order is now Medical Breakthrough, Maze Search, Password Vault, Supply Chain, Government Files |
+| `frontend/src/pages/MissionHub.jsx`         | "New here?" recommendation banner now points at Lost Medical Breakthrough (`/mission/3`) instead of Password Vault |
+
+Mission IDs and routes (`/mission/1`, `/mission/3`, etc.) are untouched — only array order and the
+recommendation banner changed, since icons/routing/`PLAYABLE_ROUTES` all key off `id`, not position.
+
+## 2026-07-23 — Scroll resets to top on every route change
+
+| Area                | What changed                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/App.jsx` | Added a `useEffect` keyed on the route's `pathname` that calls `window.scrollTo(0, 0)` |
+
+React Router doesn't reset scroll position on navigation the way a full page load does — without
+this, navigating away from partway down a long page (e.g. Resources) into a new route left the new
+page scrolled to that same spot instead of starting at the top.

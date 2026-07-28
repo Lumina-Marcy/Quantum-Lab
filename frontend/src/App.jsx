@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { MissionProvider } from './context/MissionContext';
@@ -27,6 +28,13 @@ const ROUTES_WITH_OWN_BACKDROP = ['/', '/sandbox'];
 
 function App() {
   const { pathname } = useLocation();
+
+  // React Router doesn't reset scroll position on navigation by default (unlike a full page
+  // load) — without this, going from partway down a long page (e.g. Resources) straight into a
+  // new route leaves the new page scrolled to that same spot instead of starting at the top.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <AuthProvider>
