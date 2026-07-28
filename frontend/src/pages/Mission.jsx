@@ -43,7 +43,7 @@ function UserDataForm({ profile, setProfile }) {
     setSecuring(true);
     setTimeout(() => {
       const { username, email, password, fullName, address, bankName, accountNumber } = form;
-      setProfile({ username, email, passwordLength: password.length, fullName, address, bankName, accountNumber });
+      setProfile({ username, email, password, passwordLength: password.length, fullName, address, bankName, accountNumber });
       setVault({ username, email, password, fullName, address, bankName, accountNumber });
       setSecuring(false);
     }, 700);
@@ -260,17 +260,25 @@ function UserDataForm({ profile, setProfile }) {
   );
 }
 
+// Missions with a working gameplay page — the map value is the route to launch into. Mission 1
+// additionally needs UserDataForm above (it seeds the vault the breach narration reads from);
+// other playable missions need no such setup step and can jump straight to a Start button.
+const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play' };
+
 function Mission() {
   const { id } = useParams();
   const navigate = useNavigate();
   const mission = MISSIONS.find((m) => m.id === id) || MISSIONS[0];
   const isPasswordMission = id === '1';
+  const playRoute = PLAYABLE_ROUTES[id];
   const isMoleculeMission = id === '3';
   const isAvailable = mission.status === 'available';
 
   const [profile, setProfile] = useState(null);
 
   function handleStart() {
+    if (playRoute) {
+      navigate(playRoute, { state: profile });
     if (isPasswordMission) {
       navigate('/mission/1/play', { state: profile });
     } else if (isMoleculeMission) {
@@ -282,8 +290,12 @@ function Mission() {
     <main className="mx-auto max-w-4xl px-6 py-10 space-y-6">
       {isPasswordMission && <UserDataForm profile={profile} setProfile={setProfile} />}
 
-      {isPasswordMission ? (
-        <MissionPreviewCard mission={mission} onStart={handleStart} canStart={Boolean(profile)} />
+      {playRoute ? (
+        <MissionPreviewCard
+          mission={mission}
+          onStart={handleStart}
+          canStart={isPasswordMission ? Boolean(profile) : true}
+        />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 12 }}

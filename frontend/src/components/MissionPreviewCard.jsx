@@ -9,7 +9,7 @@ const FLOW_STEPS = [
 ];
 
 /** Mission overview card: time/difficulty at a glance, the mission flow, and the Start CTA. */
-function MissionPreviewCard({ mission, onStart, canStart }) {
+function MissionPreviewCard({ mission, onStart, canStart, lockedMessage = 'Secure your vault above to begin.' }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -17,7 +17,7 @@ function MissionPreviewCard({ mission, onStart, canStart }) {
       transition={{ delay: 0.2 }}
       className="rounded-3xl border border-slate-700 bg-slate-900/90 p-8 shadow-2xl shadow-slate-950/20"
     >
-      <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Mission 1</p>
+      <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Mission {mission.id}</p>
       <h1 className="mt-4 text-4xl font-semibold text-white">{mission.title}</h1>
       <p className="mt-4 text-slate-300">{mission.summary}</p>
 
@@ -57,7 +57,7 @@ function MissionPreviewCard({ mission, onStart, canStart }) {
           >
             Start Mission →
           </button>
-          {!canStart && <p className="text-sm text-slate-500">Secure your vault above to begin.</p>}
+          {!canStart && <p className="text-sm text-slate-500">{lockedMessage}</p>}
         </div>
       </div>
     </motion.div>
