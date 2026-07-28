@@ -32,9 +32,9 @@ export const MISSIONS = [
     id: '4',
     title: 'The Supply Chain Crisis',
     summary: 'A global supply chain is collapsing under its own complexity. Reroute it before the crisis spreads.',
-    estimatedTime: '6 min',
+    estimatedTime: '~2 min',
     difficulty: 'Intermediate',
-    status: 'coming-soon',
+    status: 'available',
     terminalLines: ['Optimization Ready'],
   },
   {
