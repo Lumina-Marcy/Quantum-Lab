@@ -260,26 +260,36 @@ function UserDataForm({ profile, setProfile }) {
   );
 }
 
+// Missions with a working gameplay page — the map value is the route to launch into. Mission 1
+// additionally needs UserDataForm above (it seeds the vault the breach narration reads from);
+// other playable missions need no such setup step and can jump straight to a Start button.
+const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play' };
+
 function Mission() {
   const { id } = useParams();
   const navigate = useNavigate();
   const mission = MISSIONS.find((m) => m.id === id) || MISSIONS[0];
   const isPasswordMission = id === '1';
+  const playRoute = PLAYABLE_ROUTES[id];
 
   const [profile, setProfile] = useState(null);
 
   function handleStart() {
-    if (isPasswordMission) {
-      navigate('/mission/1/play', { state: profile });
+    if (playRoute) {
+      navigate(playRoute, { state: profile });
     }
   }
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10 space-y-6">
-      <UserDataForm profile={profile} setProfile={setProfile} />
+      {isPasswordMission && <UserDataForm profile={profile} setProfile={setProfile} />}
 
-      {isPasswordMission ? (
-        <MissionPreviewCard mission={mission} onStart={handleStart} canStart={Boolean(profile)} />
+      {playRoute ? (
+        <MissionPreviewCard
+          mission={mission}
+          onStart={handleStart}
+          canStart={isPasswordMission ? Boolean(profile) : true}
+        />
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 12 }}

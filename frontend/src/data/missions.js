@@ -13,10 +13,10 @@ export const MISSIONS = [
   {
     id: '2',
     title: 'Maze Search',
-    summary: 'Trapped with no map and the clock running. Race to find the way out, and see why quantum search gets there faster.',
+    summary: "Trapped with no map. Every junction splits your qubit into every path forward at once — cover as much ground as you can before one branch finds the exit.",
     estimatedTime: '5–7 min',
     difficulty: 'Beginner',
-    status: 'coming-soon',
+    status: 'available',
     terminalLines: ['Search Space: 1,000,000 Paths', 'Quantum Advantage: Expected'],
   },
   {
