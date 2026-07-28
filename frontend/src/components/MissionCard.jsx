@@ -22,14 +22,16 @@ const HOVER_SPARKS = [
 ];
 
 /**
- * One mission's preview card — always routes to /mission/:id; status is a badge only, never
- * a block. Hovering reveals a tiny terminal overlay ("classified research file" readout), a
- * handful of particles escaping the icon badge, and a brighter pulse on the border glow (which
- * now renders for every card, not just available ones, so "coming soon" cards get the same
- * premium reaction — just from a dimmer resting state). The available card's glow stays muted
- * until `systemReadySignal` fires (the boot sequence's real completion) — by the time a user
- * scrolls this far down, the lab has almost always already "woken up", so the card arrives
- * already illuminated rather than needing its own separate cue.
+ * One mission's preview card. Available missions route to /mission/:id; "coming soon" missions
+ * render as a plain, non-navigating panel — clicking does nothing until that mission actually
+ * exists. Hovering reveals a tiny terminal overlay (a "classified research file" readout for
+ * available missions, a plain "Coming Soon" notice for locked ones), a handful of particles
+ * escaping the icon badge, and a brighter pulse on the border glow (which renders for every card,
+ * not just available ones, so "coming soon" cards get the same premium reaction — just from a
+ * dimmer resting state). The available card's glow stays muted until `systemReadySignal` fires
+ * (the boot sequence's real completion) — by the time a user scrolls this far down, the lab has
+ * almost always already "woken up", so the card arrives already illuminated rather than needing
+ * its own separate cue.
  */
 function MissionCard({ mission, index = 0 }) {
   const [hovered, setHovered] = useState(false);
@@ -67,10 +69,12 @@ function MissionCard({ mission, index = 0 }) {
         }
       />
       <Panel
-        as={Link}
-        to={`/mission/${mission.id}`}
+        as={isAvailable ? Link : 'div'}
+        {...(isAvailable ? { to: `/mission/${mission.id}` } : {})}
         className={`relative flex h-full flex-col overflow-hidden p-6 transition-all duration-200 ${
-          isAvailable ? 'border-quantum-cyan/50' : 'group-hover:border-quantum-cyan/60 group-hover:shadow-glow-cyan'
+          isAvailable
+            ? 'border-quantum-cyan/50'
+            : 'cursor-default group-hover:border-quantum-cyan/60 group-hover:shadow-glow-cyan'
         }`}
       >
         <div className="flex items-start justify-between">
@@ -121,25 +125,36 @@ function MissionCard({ mission, index = 0 }) {
 
         <span
           className={`mt-4 inline-flex items-center gap-1 text-sm font-semibold ${
-            isAvailable ? 'text-quantum-cyan' : 'text-slate-400 group-hover:text-quantum-cyan'
+            isAvailable ? 'text-quantum-cyan' : 'text-slate-500'
           }`}
         >
-          {isAvailable ? 'Start Here →' : 'Explore →'}
+          {isAvailable ? 'Start Here →' : 'Coming Soon'}
         </span>
 
-        {mission.terminalLines?.length > 0 && (
+        {!isAvailable ? (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-quantum-navy/95 p-6 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100"
           >
-            <SequentialLines
-              lines={mission.terminalLines}
-              active={hovered}
-              stagger={0.3}
-              className="space-y-2 text-center"
-              lineClassName="font-mono text-xs text-quantum-cyan sm:text-sm"
-            />
+            <LockKeyhole size={22} strokeWidth={1.5} className="text-slate-400" />
+            <p className="text-sm font-semibold uppercase tracking-widest text-slate-200">Coming Soon</p>
+            <p className="text-xs text-slate-500">This mission isn't built yet — check back later.</p>
           </div>
+        ) : (
+          mission.terminalLines?.length > 0 && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-quantum-navy/95 p-6 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100"
+            >
+              <SequentialLines
+                lines={mission.terminalLines}
+                active={hovered}
+                stagger={0.3}
+                className="space-y-2 text-center"
+                lineClassName="font-mono text-xs text-quantum-cyan sm:text-sm"
+              />
+            </div>
+          )
         )}
       </Panel>
     </motion.div>

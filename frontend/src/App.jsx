@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Mission from './pages/Mission';
 import PasswordMission from './pages/PasswordMission';
+import MoleculeMission from './pages/MoleculeMission';
 import LearnWhy from './pages/LearnWhy';
 import VisualizeMore from './pages/VisualizeMore';
 import MazeMission from './pages/MazeMission';

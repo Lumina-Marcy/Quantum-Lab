@@ -271,12 +271,18 @@ function Mission() {
   const mission = MISSIONS.find((m) => m.id === id) || MISSIONS[0];
   const isPasswordMission = id === '1';
   const playRoute = PLAYABLE_ROUTES[id];
+  const isMoleculeMission = id === '3';
+  const isAvailable = mission.status === 'available';
 
   const [profile, setProfile] = useState(null);
 
   function handleStart() {
     if (playRoute) {
       navigate(playRoute, { state: profile });
+    if (isPasswordMission) {
+      navigate('/mission/1/play', { state: profile });
+    } else if (isMoleculeMission) {
+      navigate('/mission/3/play');
     }
   }
 
@@ -320,9 +326,21 @@ function Mission() {
             <Link to="/" className="rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700">
               Back to Home
             </Link>
-            <button className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400">
-              Start Mission
-            </button>
+            {isAvailable ? (
+              <button
+                onClick={handleStart}
+                className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+              >
+                Start Mission
+              </button>
+            ) : (
+              <button
+                disabled
+                className="cursor-not-allowed rounded-full bg-slate-800 px-5 py-3 font-semibold text-slate-500"
+              >
+                Coming Soon
+              </button>
+            )}
           </div>
         </motion.div>
       )}
