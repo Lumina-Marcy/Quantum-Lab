@@ -43,7 +43,7 @@ function UserDataForm({ profile, setProfile }) {
     setSecuring(true);
     setTimeout(() => {
       const { username, email, password, fullName, address, bankName, accountNumber } = form;
-      setProfile({ username, email, passwordLength: password.length, fullName, address, bankName, accountNumber });
+      setProfile({ username, email, password, passwordLength: password.length, fullName, address, bankName, accountNumber });
       setVault({ username, email, password, fullName, address, bankName, accountNumber });
       setSecuring(false);
     }, 700);
