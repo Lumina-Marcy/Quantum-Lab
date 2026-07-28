@@ -149,3 +149,14 @@ recommendation banner changed, since icons/routing/`PLAYABLE_ROUTES` all key off
 React Router doesn't reset scroll position on navigation the way a full page load does — without
 this, navigating away from partway down a long page (e.g. Resources) into a new route left the new
 page scrolled to that same spot instead of starting at the top.
+
+## 2026-07-23 — Fixed Lost Medical Breakthrough 404ing on Start
+
+| Area                    | What changed                                                          |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `frontend/src/App.jsx`  | Restored the missing `<Route path="/mission/3/play" element={<MoleculeMission />} />` |
+
+Another casualty of the same Maze Search merge that broke `Mission.jsx`'s build: the `/mission/3/play`
+route itself had been dropped from `App.jsx` entirely, even though `MoleculeMission` was still
+imported. With no matching route, clicking "Start Mission" on Lost Medical Breakthrough fell through
+to the `*` wildcard and landed on the 404 page. Re-added the route.
