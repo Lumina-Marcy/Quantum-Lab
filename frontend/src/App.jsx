@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Mission from './pages/Mission';
 import PasswordMission from './pages/PasswordMission';
+import MoleculeMission from './pages/MoleculeMission';
 import LearnWhy from './pages/LearnWhy';
 import VisualizeMore from './pages/VisualizeMore';
 import Sandbox from './pages/Sandbox';
@@ -48,6 +49,7 @@ function App() {
             <Route path="/mission/1/play" element={<PasswordMission />} />
             <Route path="/mission/1/learn-why" element={<LearnWhy />} />
             <Route path="/mission/1/visualize" element={<VisualizeMore />} />
+            <Route path="/mission/3/play" element={<MoleculeMission />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:id" element={<ResourceDetail />} />
