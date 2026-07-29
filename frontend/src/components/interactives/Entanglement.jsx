@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Check } from 'lucide-react';
+import Panel from '../Panel';
 
 const TILT = (25 * Math.PI) / 180;
 const MINI_SIZE = 110;
@@ -138,8 +140,8 @@ function Entanglement() {
   const maxProb = Math.max(...distribution.map((d) => d.prob), 0.0001);
 
   return (
-    <div className="space-y-6">
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+    <div className="space-y-6 text-center">
+      <p className="mx-auto max-w-xl text-sm text-slate-400">
         Each sphere below is its own qubit — move your mouse over one to set its odds of measuring 0 or 1;
         it keeps that setting even after you move on to the next qubit, so you can shape several qubits
         differently and see how they combine. The chart shows the odds of every possible combined outcome
@@ -148,7 +150,7 @@ function Entanglement() {
         point of entanglement.
       </p>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-400">Qubits:</span>
           <button
@@ -170,11 +172,12 @@ function Entanglement() {
 
         <button
           onClick={() => setEntangled((e) => !e)}
-          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
             entangled ? 'bg-fuchsia-400 text-slate-950' : 'border border-slate-600 text-slate-300 hover:border-slate-400'
           }`}
         >
-          {entangled ? 'Entangled ✓' : 'Entangle qubits'}
+          {entangled && <Check className="h-4 w-4" strokeWidth={2.5} />}
+          {entangled ? 'Entangled' : 'Entangle qubits'}
         </button>
 
         <button
@@ -185,14 +188,14 @@ function Entanglement() {
         </button>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-6 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+      <Panel className="flex flex-wrap justify-center gap-6 p-4">
         {anglesList.map((angles, i) => (
           <QubitSphere key={i} index={i} angles={angles} onMove={handleMove} />
         ))}
-      </div>
+      </Panel>
 
       {entangled && (
-        <p className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-4 text-sm text-fuchsia-300">
+        <p className="mx-auto max-w-xl border-l-2 border-fuchsia-400/50 py-1 pl-4 text-left text-sm text-fuchsia-300">
           With entanglement on, hovering the spheres above no longer matters for the chart below — the
           qubits only ever come up all-0s or all-1s together, 50/50, and nothing in between. No amount of
           individually tweaking each qubit's own odds can reproduce that pattern — it only exists because
@@ -204,8 +207,8 @@ function Entanglement() {
         <p className="mb-2 text-center text-sm uppercase tracking-[0.3em] text-cyan-300/80">
           Probability distribution
         </p>
-        <div className="overflow-x-auto rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
-          <div className="flex h-40 items-end gap-1" style={{ width: distribution.length * 32 }}>
+        <Panel className="overflow-x-auto p-4">
+          <div className="mx-auto flex h-40 items-end gap-1" style={{ width: distribution.length * 32 }}>
             {distribution.map(({ bits, prob }) => (
               <div key={bits} className="flex w-7 shrink-0 flex-col items-center gap-1">
                 <span className="text-[9px] text-slate-500">{Math.round(prob * 100)}%</span>
@@ -219,7 +222,7 @@ function Entanglement() {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       </div>
     </div>
   );

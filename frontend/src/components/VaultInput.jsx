@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
 
-/** Labeled input with an icon, real label/id association, and a focus glow. */
+/** Labeled input with an icon, real label/id association, and a focus glow. `icon` is a Lucide
+ * icon component, not an emoji string — matching the icon vocabulary used app-wide. */
 function VaultInput({
   id,
   name,
   label,
-  icon,
+  icon: Icon,
   type = 'text',
   value,
   onChange,
@@ -18,7 +19,7 @@ function VaultInput({
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
       <label htmlFor={id} className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-300">
-        <span aria-hidden="true">{icon}</span>
+        {Icon && <Icon aria-hidden="true" className="h-4 w-4 text-quantum-cyan" />}
         {label}
         {required && <span className="text-cyan-400">*</span>}
       </label>

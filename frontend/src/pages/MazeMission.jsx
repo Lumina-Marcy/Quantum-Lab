@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { Flag } from 'lucide-react';
 import QuantumCore from '../components/QuantumCore';
+import Panel from '../components/Panel';
 import SequentialLines from '../components/SequentialLines';
 import ProgressBar from '../components/ProgressBar';
 import {
@@ -51,8 +53,8 @@ function Cell({ cell, isExit, isRevealed, tokensHere, isReplayMarker }) {
     return (
       <div className="relative aspect-square bg-slate-950">
         {isExit && (
-          <span className="absolute inset-0 flex items-center justify-center text-[0.55rem] opacity-30 sm:text-xs">
-            🏁
+          <span className="absolute inset-0 flex items-center justify-center opacity-30">
+            <Flag className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </span>
         )}
       </div>
@@ -78,7 +80,9 @@ function Cell({ cell, isExit, isRevealed, tokensHere, isReplayMarker }) {
   return (
     <div style={style} className={`relative aspect-square ${tintClass} transition-colors duration-300`}>
       {isExit && (
-        <span className="absolute inset-0 flex items-center justify-center text-[0.6rem] sm:text-xs">🏁</span>
+        <span className="absolute inset-0 flex items-center justify-center">
+          <Flag className="h-3.5 w-3.5" />
+        </span>
       )}
 
       {tokensHere.map((t) => (
@@ -107,7 +111,11 @@ function Cell({ cell, isExit, isRevealed, tokensHere, isReplayMarker }) {
   );
 }
 
-function DirectionPad({ onMove, disabled }) {
+function DirectionPad({ onMove, disabled, onHoverChange }) {
+  const hoverProps = {
+    onPointerEnter: () => onHoverChange?.(true),
+    onPointerLeave: () => onHoverChange?.(false),
+  };
   return (
     <div className="grid w-40 grid-cols-3 grid-rows-2 gap-1.5">
       <div />
@@ -115,7 +123,8 @@ function DirectionPad({ onMove, disabled }) {
         type="button"
         disabled={disabled}
         onClick={() => onMove('N')}
-        className="rounded-lg bg-slate-800 py-2 text-lg text-slate-200 hover:bg-slate-700 disabled:opacity-40"
+        {...hoverProps}
+        className="rounded-lg bg-white/[0.04] py-2 text-lg text-slate-200 hover:bg-white/[0.08] disabled:opacity-40"
       >
         ↑
       </button>
@@ -124,7 +133,8 @@ function DirectionPad({ onMove, disabled }) {
         type="button"
         disabled={disabled}
         onClick={() => onMove('W')}
-        className="rounded-lg bg-slate-800 py-2 text-lg text-slate-200 hover:bg-slate-700 disabled:opacity-40"
+        {...hoverProps}
+        className="rounded-lg bg-white/[0.04] py-2 text-lg text-slate-200 hover:bg-white/[0.08] disabled:opacity-40"
       >
         ←
       </button>
@@ -132,7 +142,8 @@ function DirectionPad({ onMove, disabled }) {
         type="button"
         disabled={disabled}
         onClick={() => onMove('S')}
-        className="rounded-lg bg-slate-800 py-2 text-lg text-slate-200 hover:bg-slate-700 disabled:opacity-40"
+        {...hoverProps}
+        className="rounded-lg bg-white/[0.04] py-2 text-lg text-slate-200 hover:bg-white/[0.08] disabled:opacity-40"
       >
         ↓
       </button>
@@ -140,7 +151,8 @@ function DirectionPad({ onMove, disabled }) {
         type="button"
         disabled={disabled}
         onClick={() => onMove('E')}
-        className="rounded-lg bg-slate-800 py-2 text-lg text-slate-200 hover:bg-slate-700 disabled:opacity-40"
+        {...hoverProps}
+        className="rounded-lg bg-white/[0.04] py-2 text-lg text-slate-200 hover:bg-white/[0.08] disabled:opacity-40"
       >
         →
       </button>
@@ -159,9 +171,10 @@ function ConceptToast({ toast }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3 }}
-            className="rounded-xl border border-cyan-500/30 bg-slate-900/90 px-4 py-3 text-center font-mono text-xs leading-relaxed text-cyan-200 shadow-lg"
           >
-            {toast.text}
+            <Panel className="px-4 py-3 text-center font-mono text-xs leading-relaxed text-cyan-200">
+              {toast.text}
+            </Panel>
           </motion.div>
         )}
       </AnimatePresence>
@@ -196,14 +209,14 @@ function SearchGradePanel({ resolution }) {
   );
 
   return (
-    <div className={`mx-auto mb-8 max-w-md rounded-2xl border p-6 ${grade.cls}`}>
-      <p className="text-center text-xs uppercase tracking-widest opacity-80">Search Efficiency Score</p>
+    <div className="mx-auto mb-10 max-w-md text-center">
+      <p className="text-xs uppercase tracking-widest text-slate-500">Search Efficiency Score</p>
       <div className="mt-3 flex items-center justify-center gap-4">
-        <span className="text-5xl font-bold leading-none">{grade.grade}</span>
-        <span className="text-2xl font-semibold tabular-nums">{grade.percentage}%</span>
+        <span className={`font-display text-6xl font-bold leading-none ${grade.cls}`}>{grade.grade}</span>
+        <span className="text-2xl font-semibold tabular-nums text-slate-300">{grade.percentage}%</span>
       </div>
-      <p className="mt-1 text-center text-sm font-semibold">{grade.label}</p>
-      <p className="mt-3 text-center text-[11px] leading-relaxed opacity-80">
+      <p className={`mt-2 text-sm font-semibold ${grade.cls}`}>{grade.label}</p>
+      <p className="mx-auto mt-4 max-w-sm text-[11px] leading-relaxed text-slate-500">
         Weighted by how much of the maze your branches covered ({resolution.coveragePercent}%), how few shared-control
         steps it took, and how much of the shared clock you had left.
       </p>
@@ -219,9 +232,9 @@ function ConceptRecap({ stats, coveragePercent, cellsCovered }) {
     { key: 'coveragePercent', label: 'Maze coverage', value: `${coveragePercent}%` },
   ];
   return (
-    <div className="mt-6 grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
+    <div className="mt-6 grid grid-cols-2 divide-x divide-y divide-white/[0.06] border border-white/[0.06] text-left sm:grid-cols-4 sm:divide-y-0">
       {items.map((it) => (
-        <div key={it.key} className="rounded-xl bg-slate-900/60 p-3">
+        <div key={it.key} className="p-4">
           <p className="text-lg font-semibold text-cyan-200">{it.value}</p>
           <p className="mt-1 text-[11px] leading-snug text-slate-400">{it.label}</p>
         </div>
@@ -236,10 +249,10 @@ function ResolutionScreen({ resolution, onReplay }) {
   return (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center">
       <p className="text-xs uppercase tracking-widest text-cyan-400/80">{won ? 'Exit Found' : 'Time Expired'}</p>
-      <h1 className="mt-2 text-3xl font-bold text-white">
+      <h1 className="mt-3 font-display text-3xl font-bold text-white sm:text-4xl">
         {won ? `Found It In ${steps} Steps` : 'The Search Ran Out Of Time'}
       </h1>
-      <p className="mt-3 text-sm text-slate-400">
+      <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-slate-400">
         {won
           ? `One branch reached the exit after ${steps} shared-control steps, covering ${coveragePercent}% of the maze (${cellsCovered} cells) along the way.`
           : 'The clock hit zero before any branch reached the exit. Ground your branches never covered stays fog forever — the same wall a classical search hits, just distributed across whatever branches you kept alive.'}
@@ -247,7 +260,7 @@ function ResolutionScreen({ resolution, onReplay }) {
 
       <SearchGradePanel resolution={resolution} />
 
-      <div className="mt-8 rounded-2xl border border-slate-700 bg-slate-900/60 p-6 text-left">
+      <div className="mt-10 border-t border-white/[0.06] pt-8 text-left">
         <p className="text-sm font-semibold text-cyan-300">How this actually works</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           Walking one corridor at a time and backtracking on dead ends is classical search — worst case, you'd visit
@@ -260,13 +273,13 @@ function ResolutionScreen({ resolution, onReplay }) {
           Every mechanic in this run — a junction splitting your qubit, a dead-end branch locking in place for good,
           and the single branch that reached the exit collapsing every other branch away and replaying as one
           classical path — is the same machinery behind quantum search, not just flavor text: superposition,
-          decoherence, and measurement. Mission 3 uses this exact same machinery to search millions of molecular
+          decoherence, and measurement. Mission 1 uses this exact same machinery to search millions of molecular
           structures for a cure. This maze is the mechanism; that mission is the payoff.
         </p>
         <ConceptRecap stats={conceptStats} coveragePercent={coveragePercent} cellsCovered={cellsCovered} />
       </div>
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
         <button onClick={onReplay} className="rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700">
           Run It Back
         </button>
@@ -307,6 +320,17 @@ function MazeMission() {
   const handlersRef = useRef({});
   const seenConceptsRef = useRef(new Set());
   const toastTimeoutRef = useRef(null);
+
+  // The Core is this mission's companion and its progress indicator at once: a hover lift on the
+  // direction pad, a blue pulse when a branch reaches the exit, a brief destabilize when one
+  // dead-ends, and a coarse intensity arc that climbs with maze coverage and lands on a final
+  // state reflecting the search's efficiency grade.
+  const [coreStage, setCoreStage] = useState('alive');
+  const [hoveredActionable, setHoveredActionable] = useState(false);
+  const corePulse = useMotionValue(0);
+  const pulseScale = useTransform(corePulse, [0, 1], [0.4, 2.2]);
+  const pulseOpacity = useTransform(corePulse, [0, 0.15, 1], [0, 0.55, 0]);
+  const coreProgress = useMotionValue(0.3);
 
   useEffect(() => () => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -364,11 +388,14 @@ function MazeMission() {
     if (result.locks > 0) {
       bumpStat('locks', result.locks);
       announce('decoherence');
+      setCoreStage('unstable');
+      setTimeout(() => setCoreStage((s) => (s === 'unstable' ? 'alive' : s)), 1400);
     }
 
     if (result.winner) {
       setWinnerPath(result.winner.path);
       announce('measurement');
+      animate(corePulse, [0, 1], { duration: 1.1, ease: 'easeOut' });
       setReplayIndex(0);
       setPhase('replaying');
     }
@@ -413,6 +440,23 @@ function MazeMission() {
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, winnerPath, replayIndex]);
+
+  // Coarse mission-long arc: dim during the intro, climbing with maze coverage through the walk,
+  // a further lift once a branch is found and replaying, landing on the final efficiency grade.
+  useEffect(() => {
+    let target = 0.3;
+    if (phase === 'walking') {
+      target = 0.3 + 0.6 * (visited.size / TOTAL_CELLS);
+    } else if (phase === 'replaying') {
+      target = 0.9;
+    } else if (phase === 'resolved' && resolution) {
+      const grade = computeWalkGrade(resolution.steps, resolution.parSteps, resolution.coverageRatio, resolution.timeRemainingRatio);
+      target = grade.percentage / 100;
+      if (grade.grade === 'S' || grade.grade === 'A') setCoreStage('stabilizing');
+    }
+    const controls = animate(coreProgress, target, { duration: 1.2, ease: 'easeInOut' });
+    return controls.stop;
+  }, [phase, visited, resolution]);
 
   function handleIntroComplete() {
     setTimeout(() => setPhase('walking'), 600);
@@ -475,9 +519,23 @@ function MazeMission() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950">
-      <div className="flex items-center justify-center gap-2 border-b border-slate-800/60 py-3">
-        <QuantumCore stage="alive" className="h-5 w-5" particleCount={5} detail="minimal" />
+    <main className="min-h-screen bg-transparent">
+      <div className="relative flex items-center justify-center gap-4 border-b border-white/[0.06] py-6">
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute h-20 w-20 rounded-full"
+          style={{
+            scale: pulseScale,
+            opacity: pulseOpacity,
+            background: 'radial-gradient(circle, rgba(191,219,254,0.65) 0%, rgba(59,130,246,0.3) 45%, transparent 72%)',
+          }}
+        />
+        <motion.div
+          animate={{ scale: hoveredActionable ? 1.08 : 1, filter: hoveredActionable ? 'brightness(1.25)' : 'brightness(1)' }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        >
+          <QuantumCore stage={coreStage} progress={coreProgress} className="h-14 w-14" particleCount={10} />
+        </motion.div>
         <span className="font-mono text-xs uppercase tracking-[0.3em] text-slate-500">Maze Search</span>
       </div>
 
@@ -509,11 +567,11 @@ function MazeMission() {
           >
             <ConceptToast toast={toast} />
 
-            <div className="mb-6 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-900/70 p-4">
+            <div className="mb-8 flex flex-col gap-4 border-y border-white/[0.06] py-4 sm:flex-row sm:items-center sm:justify-center sm:gap-10">
+              <div className="text-center">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Time Remaining</p>
                 <p className="mt-1 text-lg font-semibold text-white">{timeLeft}s</p>
-                <div className="mt-2">
+                <div className="mx-auto mt-2 w-32">
                   <ProgressBar
                     value={(timeLeft / TIMER_SECONDS) * 100}
                     gradient={timeLeft <= TIMER_SECONDS * 0.25 ? 'from-red-600 to-red-400' : 'from-amber-500 to-amber-300'}
@@ -521,17 +579,14 @@ function MazeMission() {
                   />
                 </div>
               </div>
-              <div className="rounded-2xl bg-slate-900/70 p-4">
+              <div className="text-center">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Steps Taken</p>
                 <p className="mt-1 text-lg font-semibold text-cyan-200">{stepCount}</p>
                 <p className="mt-1 text-[11px] text-slate-500">Active branches: {activeBranches}</p>
               </div>
-              <div className="rounded-2xl bg-slate-900/70 p-4">
+              <div className="text-center">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Maze Coverage</p>
                 <p className="mt-1 text-lg font-semibold text-purple-200">{coveragePercent}%</p>
-                <div className="mt-2">
-                  <ProgressBar value={coveragePercent} gradient="from-purple-500 to-cyan-300" duration={0.3} />
-                </div>
               </div>
             </div>
 
@@ -539,7 +594,7 @@ function MazeMission() {
               {renderMazeGrid()}
 
               <div className="flex flex-col items-center gap-4">
-                <DirectionPad onMove={attemptMove} disabled={phase !== 'walking'} />
+                <DirectionPad onMove={attemptMove} disabled={phase !== 'walking'} onHoverChange={setHoveredActionable} />
 
                 <p className="max-w-[220px] text-center text-xs text-slate-500">
                   Arrow keys / WASD — every direction press moves every branch committed to that direction at once.

@@ -28,7 +28,7 @@ function MissionHub() {
         <p className="text-sm text-slate-200">
           <span aria-hidden="true">✨</span> New here? Start with the Lost Medical Breakthrough mission.
         </p>
-        <Button to="/mission/3" variant="primary" className="px-5 py-2.5 text-sm">
+        <Button to="/mission/1" variant="primary" className="px-5 py-2.5 text-sm">
           Start Mission
         </Button>
       </motion.div>

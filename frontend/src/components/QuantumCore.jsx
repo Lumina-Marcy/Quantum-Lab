@@ -109,7 +109,7 @@ function orbitParticles(orbit, count, seedBase) {
  * orbit) but have their OWN, independently-timed opacity — particles become visible earliest in
  * the intensity range, the ribbon ("orbitals begin forming") last, so a single 0→1 rise reads as
  * "particles appear, then the orbital forms around them" rather than everything popping at once. */
-function OrbitRing({ orbit, index, intensity, wobble, distortScale, distortOpacity, colors, full, particleCount }) {
+function OrbitRing({ orbit, index, intensity, wobble, distortScale, distortOpacity, colors, full, particleCount, speedMultiplier }) {
   // Both ranges reach a literal 0 at their low end rather than a small non-zero floor —
   // `useTransform` clamps to the first output value *below* the input range, so a non-zero floor
   // here would mean the Core stays faintly visible even at intensity 0, contradicting "the Core
@@ -122,7 +122,7 @@ function OrbitRing({ orbit, index, intensity, wobble, distortScale, distortOpaci
 
   return (
     <motion.g style={{ rotate: tiltWithWobble }}>
-      <motion.g animate={{ rotate: orbit.dir * 360 }} transition={{ duration: orbit.speed, repeat: Infinity, ease: 'linear' }}>
+      <motion.g animate={{ rotate: orbit.dir * 360 }} transition={{ duration: orbit.speed / speedMultiplier, repeat: Infinity, ease: 'linear' }}>
         <motion.g style={{ opacity: ringOpacity, scale: distortScale }}>
           {full && (
             <>
@@ -209,7 +209,7 @@ function useArcFlicker(enabled, minDelaySeconds, maxDelaySeconds) {
  * a single crisp stroke each and the nucleus's breathing loop, the one thing that must stay
  * recognizable at every size.
  */
-function QuantumCore({ stage = 'dormant', progress, className = 'h-64 w-64', particleCount = 10, detail = 'full' }) {
+function QuantumCore({ stage = 'dormant', progress, className = 'h-64 w-64', particleCount = 10, detail = 'full', speedMultiplier = 1 }) {
   const internalIntensity = useMotionValue(STAGE_INTENSITY[stage] ?? 0);
   const distortion = useMotionValue(0);
   const full = detail === 'full';
@@ -350,6 +350,7 @@ function QuantumCore({ stage = 'dormant', progress, className = 'h-64 w-64', par
             colors={colors}
             full={full}
             particleCount={perOrbitParticleCount}
+            speedMultiplier={speedMultiplier}
           />
         ))}
 

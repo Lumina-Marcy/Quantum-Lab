@@ -293,12 +293,12 @@ export function stepTokens(maze, tokens, dirKey) {
 export const SCORE_WEIGHTS = { coverage: 0.45, stepEfficiency: 0.45, timeRemaining: 0.1 };
 
 export const GRADE_TIERS = [
-  { min: 90, grade: 'S', label: 'Full Sweep', cls: 'border-emerald-400/60 bg-emerald-950/30 text-emerald-200' },
-  { min: 75, grade: 'A', label: 'Near-Complete Sweep', cls: 'border-cyan-400/60 bg-cyan-950/30 text-cyan-200' },
-  { min: 60, grade: 'B', label: 'Solid Coverage', cls: 'border-sky-400/60 bg-sky-950/30 text-sky-200' },
-  { min: 40, grade: 'C', label: 'Partial Coverage', cls: 'border-amber-400/60 bg-amber-950/30 text-amber-200' },
-  { min: 20, grade: 'D', label: 'Barely Mapped', cls: 'border-orange-400/60 bg-orange-950/30 text-orange-200' },
-  { min: 0, grade: 'F', label: 'Lost In The Maze', cls: 'border-red-500/60 bg-red-950/30 text-red-200' },
+  { min: 90, grade: 'S', label: 'Full Sweep', cls: 'text-emerald-300' },
+  { min: 75, grade: 'A', label: 'Near-Complete Sweep', cls: 'text-cyan-300' },
+  { min: 60, grade: 'B', label: 'Solid Coverage', cls: 'text-sky-300' },
+  { min: 40, grade: 'C', label: 'Partial Coverage', cls: 'text-amber-300' },
+  { min: 20, grade: 'D', label: 'Barely Mapped', cls: 'text-orange-300' },
+  { min: 0, grade: 'F', label: 'Lost In The Maze', cls: 'text-red-300' },
 ];
 
 export function computeWalkGrade(stepsTaken, parSteps, coverageRatio, timeRemainingRatio) {

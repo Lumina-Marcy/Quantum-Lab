@@ -7,7 +7,7 @@ function KeyTakeaway({ points, note }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-950/40 to-slate-900/80 p-6 shadow-xl shadow-purple-500/10"
+      className="rounded-2xl border border-t-2 border-x-white/[0.08] border-b-white/[0.08] border-t-purple-400/50 bg-white/[0.03] p-6 shadow-xl shadow-black/20 backdrop-blur-sm"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-purple-300">Key Takeaway</p>
       <ul className="mt-4 space-y-3">

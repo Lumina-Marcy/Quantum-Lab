@@ -29,7 +29,7 @@ const MODES = [
 ];
 
 /** Beginner-friendly, intentionally-simplified 2D stand-in for a Bloch sphere. */
-function BlochSphereMini() {
+function BlochSphereMini({ size = 'md' }) {
   const [mode, setMode] = useState('superposition');
   const [flash, setFlash] = useState(null);
   const { cx, cy } = useMemo(equatorKeyframes, []);
@@ -45,7 +45,7 @@ function BlochSphereMini() {
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 100 140" className="h-56 w-full max-w-[12rem]">
+      <svg viewBox="0 0 100 140" className={size === 'lg' ? 'h-80 w-full max-w-[18rem]' : 'h-56 w-full max-w-[12rem]'}>
         <ellipse cx={CENTER.x} cy={CENTER.y} rx={45} ry={62} fill="none" stroke="#334155" strokeWidth={1} />
         <ellipse
           cx={CENTER.x}
