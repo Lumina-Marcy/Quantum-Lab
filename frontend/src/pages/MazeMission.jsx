@@ -154,7 +154,7 @@ function renderGrid({ maze, visited, tokens = [], markerPos = null }) {
   );
 }
 
-function DirectionPad({ onMove, disabled }) {
+function DirectionPad({ onMove, disabled, hoverProps }) {
   return (
     <div className="grid w-40 grid-cols-3 grid-rows-2 gap-1.5">
       <div />
@@ -465,6 +465,10 @@ function MazeMission() {
   // state reflecting the search's efficiency grade.
   const [coreStage, setCoreStage] = useState('alive');
   const [hoveredActionable, setHoveredActionable] = useState(false);
+  const hoverProps = {
+    onMouseEnter: () => setHoveredActionable(true),
+    onMouseLeave: () => setHoveredActionable(false),
+  };
   const corePulse = useMotionValue(0);
   const pulseScale = useTransform(corePulse, [0, 1], [0.4, 2.2]);
   const pulseOpacity = useTransform(corePulse, [0, 0.15, 1], [0, 0.55, 0]);
@@ -828,7 +832,7 @@ function MazeMission() {
               })}
 
               <div className="flex flex-col items-center gap-4">
-                <DirectionPad onMove={attemptClassicalMove} disabled={phase !== 'classical-walking'} />
+                <DirectionPad onMove={attemptClassicalMove} disabled={phase !== 'classical-walking'} hoverProps={hoverProps} />
 
                 <p className="max-w-[220px] text-center text-xs text-slate-500">
                   Arrow keys / WASD. No shortcuts here — hit a dead end, back out yourself.
@@ -878,7 +882,7 @@ function MazeMission() {
               {renderGrid({ maze: quantumMaze, visited: quantumVisited, tokens: quantumTokens })}
 
               <div className="flex flex-col items-center gap-4">
-                <DirectionPad onMove={attemptQuantumMove} disabled={phase !== 'quantum-walking'} />
+                <DirectionPad onMove={attemptQuantumMove} disabled={phase !== 'quantum-walking'} hoverProps={hoverProps} />
 
                 <p className="max-w-[220px] text-center text-xs text-slate-500">
                   Arrow keys / WASD — every direction press moves every branch committed to that direction at once.
