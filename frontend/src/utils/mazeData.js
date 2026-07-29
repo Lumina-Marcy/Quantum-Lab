@@ -287,10 +287,32 @@ export function stepTokens(maze, tokens, dirKey) {
   return { tokens: nextTokens, newlyVisited, moved, splits, locks, winner };
 }
 
+/**
+ * The classical (solo, pre-quantum) counterpart to `stepTokens`: one position, no splitting, no
+ * locking — just a normal maze walker. A wall in `dirKey` is a no-op; otherwise returns the new
+ * cell. Backtracking out of a dead end is just the player pressing the opposite direction again,
+ * same as any real maze — nothing special has to happen here for that.
+ */
+export function stepClassical(maze, position, dirKey) {
+  const cell = maze.cells[position.row][position.col];
+  if (cell.walls[dirKey]) return { moved: false };
+  const [dr, dc] = DELTAS[dirKey];
+  const row = position.row + dr;
+  const col = position.col + dc;
+  return { moved: true, row, col };
+}
+
 // Weighted-score-into-letter-tier shape used elsewhere in the app (e.g. the Password Vault
 // mission's Quantum Readiness Score), sized to what this mission actually asks the player to
 // optimize: cover as much of the maze as possible in as few shared-control steps as possible.
 export const SCORE_WEIGHTS = { coverage: 0.45, stepEfficiency: 0.45, timeRemaining: 0.1 };
+
+// The classical solo walker has no splitting, so every dead end costs a real there-and-back
+// backtrack instead of just quietly locking a branch — step efficiency has to carry most of the
+// grade or the solo score reads about the same as the quantum one, undercutting the entire point
+// of running the maze twice. Coverage stays a minor factor since exhaustive backtracking naturally
+// covers most of the maze regardless of skill.
+export const CLASSICAL_SCORE_WEIGHTS = { coverage: 0.2, stepEfficiency: 0.7, timeRemaining: 0.1 };
 
 export const GRADE_TIERS = [
   { min: 90, grade: 'S', label: 'Full Sweep', cls: 'border-emerald-400/60 bg-emerald-950/30 text-emerald-200' },
@@ -301,13 +323,13 @@ export const GRADE_TIERS = [
   { min: 0, grade: 'F', label: 'Lost In The Maze', cls: 'border-red-500/60 bg-red-950/30 text-red-200' },
 ];
 
-export function computeWalkGrade(stepsTaken, parSteps, coverageRatio, timeRemainingRatio) {
+export function computeWalkGrade(stepsTaken, parSteps, coverageRatio, timeRemainingRatio, weights = SCORE_WEIGHTS) {
   const stepEfficiency = Math.min(100, (parSteps / Math.max(stepsTaken, parSteps, 1)) * 100);
   const coverageScore = Math.min(100, coverageRatio * 100);
   const percentage = Math.round(
-    coverageScore * SCORE_WEIGHTS.coverage +
-      stepEfficiency * SCORE_WEIGHTS.stepEfficiency +
-      timeRemainingRatio * 100 * SCORE_WEIGHTS.timeRemaining
+    coverageScore * weights.coverage +
+      stepEfficiency * weights.stepEfficiency +
+      timeRemainingRatio * 100 * weights.timeRemaining
   );
   const tier = GRADE_TIERS.find((t) => percentage >= t.min) ?? GRADE_TIERS[GRADE_TIERS.length - 1];
   return {
