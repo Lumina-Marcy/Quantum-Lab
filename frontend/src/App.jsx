@@ -12,6 +12,7 @@ import Mission from './pages/Mission';
 import PasswordMission from './pages/PasswordMission';
 import MoleculeMission from './pages/MoleculeMission';
 import SupplyChainMission from './pages/SupplyChainMission';
+import GovernmentFilesMission from './pages/GovernmentFilesMission';
 import LearnWhy from './pages/LearnWhy';
 import VisualizeMore from './pages/VisualizeMore';
 import MazeMission from './pages/MazeMission';
@@ -62,6 +63,7 @@ function App() {
             <Route path="/mission/2/play" element={<MazeMission />} />
             <Route path="/mission/3/play" element={<MoleculeMission />} />
             <Route path="/mission/4/play" element={<SupplyChainMission />} />
+            <Route path="/mission/5/play" element={<GovernmentFilesMission />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:id" element={<ResourceDetail />} />

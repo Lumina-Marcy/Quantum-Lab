@@ -308,3 +308,149 @@ visitors could open.
 `PRIORITY_META.deadlineS` cut across the board (`frontend/src/pages/SupplyChainMission.jsx`), keeping
 each tier's deadline-to-handling-time ratio close to ~3x so orders stay winnable but with noticeably
 less slack before they go late.
+
+## 2026-07-28 (eleventh same-day pass) — blank phase-flow scaffold for Government Files (Mission 5)
+
+| Area                                             | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | New — a blank scaffold copying the intro → gameplay → consequence → outcome phase-flow shape used by every other mission, with only placeholder text and the buttons that advance between phases |
+| `frontend/src/App.jsx`                           | Registered `/mission/5/play` so the scaffold is directly reachable for development |
+
+Deliberately not wired into `Mission.jsx`'s `PLAYABLE_ROUTES` or flipped to `'available'` in
+`missions.js` yet — Mission 5's card on the Mission Hub stays inert ("Coming Soon") so this
+placeholder isn't exposed to real visitors while its content is still blank. Fill in each phase
+component's placeholder paragraph in place; the state machine (`useState('intro')`, the
+`AnimatePresence mode="wait"` switch, one `onNext`/`onReplay` callback per phase) doesn't need to
+change shape as content gets added, matching how every other mission in this app is structured.
+
+**Same day, hooked up:** since nothing is deployed yet, flipped Mission 5's `status` to `'available'`
+in `missions.js` and added `5: '/mission/5/play'` to `Mission.jsx`'s `PLAYABLE_ROUTES`. The Mission
+Hub card is now live and clickable like every other mission, still showing the blank placeholder
+scaffold until its phases get real content.
+
+## 2026-07-28 (twelfth same-day pass) — Government Files: filled in with a Quantum Key Distribution mission
+
+The blank scaffold now has real content across all 6 phases — intro, a clean-transmission tutorial,
+an interception round with a three-choice decision (only "Discard Key" is correct), a harder round
+requiring the player to scan and click the tampered photon, a 100-photon final round, and an outcome
+comparing classical vs. quantum interception. See
+[`docs/GOVERNMENT_FILES_MISSION.md`](GOVERNMENT_FILES_MISSION.md) for the full writeup. Every
+animated sequence is triggered by a button click rather than a mount effect, guarded by a
+`useMountedRef()` check after each `await` — deliberately avoiding the auto-timer architecture that
+caused the Warehouse Chaos mission's original bugs, since nothing here needs to run without a player
+action starting it first.
+
+## 2026-07-28 (thirteenth same-day pass) — fixed Government Files getting stuck at "Transmitting…"
+
+| Area                                            | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | `useMountedRef()` now resets `ref.current = true` inside the effect body, not just via the initial `useRef(true)` |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | `PhotonRow` now spreads photons across distinct vertical lanes instead of one shared horizontal track |
+
+Every animated phase (`TutorialPhase`, `SpyPhase`, `Round3Phase`) got permanently stuck at
+"Transmitting…" in dev mode after clicking Start. Root cause: React 18 StrictMode's dev-only
+mount → cleanup → remount simulation ran `useMountedRef`'s cleanup (setting `ref.current = false`)
+without anything ever setting it back to `true`, so every later `if (!mountedRef.current) return`
+check silently bailed out for the rest of the component's real lifetime — `setArrived(true)` never
+ran. This is a dev-only StrictMode effect — production builds don't double-invoke effects — so
+`npx vite build` had no way to catch it; it only surfaced once the app was actually run in a browser
+(confirmed by a user screenshot showing the stuck "Transmitting…" state). Fixed by setting
+`ref.current = true` at the top of the effect body itself, so the simulated cleanup-then-rerun cycle
+leaves it in the correct (mounted) state instead of permanently flipped false.
+
+Separately (not the cause of the stuck state, but a real cosmetic bug on the same screen): all
+photons in a `PhotonRow` shared the identical start and end position, so they'd converge onto the
+exact same point and visually collapse into a single dot once arrived, hiding all but the
+last-rendered one. Fixed by spreading photons across distinct vertical lanes within the row.
+
+## 2026-07-28 (fourteenth same-day pass) — Rounds 2 and 3 become a "track the moving photon" game
+
+| Area                                            | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | New `driftWaypoints`/`DriftingPhoton`/`PhotonField` — photons now drift continuously in a bounded field instead of traveling once in a straight line |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | `SpyPhase` (Round 2): the tampered photon changes color while still drifting, and the player can act at any time — no more fixed "wait for it to arrive" gate |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | `Round3Phase`: after scanning, the player clicks directly on the tampered photon *while it's still moving*, rather than picking from a static row of buttons |
+
+Reuses the same jitter-seeded looping drift idiom as Molecule Mission's `FloatingAtom` (proven,
+already working elsewhere in this app) rather than inventing new animation machinery. `PhotonRow`
+(the straight-line traversal) is kept for `TutorialPhase` only, where the point is a calm baseline
+"here's what clean looks like," not a tracking challenge.
+
+## 2026-07-28 (fifteenth same-day pass) — new Round 4: triage multiple messages at once
+
+| Area                                            | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | New `TriagePhase` — five named messages arrive together, each independently marked "Send" or "Discard" |
+
+Sits between Round 3 and the Final Round (`phase: 'triage'`). Where Rounds 2–3 are about tracking one
+moving target, this round is about applying the same rule (discard if touched) consistently across
+several independent messages presented at once — each shows a row of integrity dots (all green if
+clean, one red if compromised via `messageDotPattern`), and a wrong Send/Discard call just gives
+inline feedback with no penalty, so there's no dead end.
+
+## 2026-07-28 (sixteenth same-day pass) — Round 4 reworked into a memorize-then-verify game
+
+The card-based "Sort the Traffic" design (previous entry) didn't match what was actually wanted — a
+screenshot of it prompted a full rework into a proper memory game (`phase: 'memory'`, `MemoryPhase`,
+replacing `TriagePhase`):
+
+1. **Preview** — six photons sit in fixed lanes at Agency A for 4 seconds; the player has to
+   memorize which color is in which lane before anything moves.
+2. **Traveling** — all six drift toward Agency B over a few seconds (each lane's duration/wobble
+   randomized independently via `Math.random()`, not a shared jitter seed, since this is genuine
+   per-playthrough replay variance rather than a "looks random, stays reproducible" layout); two
+   random lanes swap to a different color from the same six-color set partway through transit.
+3. **Deciding** — each of the six arrived photons gets an independent Keep/Discard button; the
+   player has to recall the original layout and act on whichever lanes don't match anymore.
+
+Ends with a score out of 6, shown either way (this round doesn't gate on a correct outcome the way
+every other round in the mission does — it's explicitly a skill/memory check with a visible result,
+not a pass/fail gate). `pickSwappedColor` always swaps to one of the *other* original colors, never
+an outside color, so the final six photons look completely ordinary and only actual memory of the
+preview phase reveals which lanes moved.
+
+## 2026-07-28 (seventeenth same-day pass) — fixed lane misalignment, added bouncing + faster travel
+
+| Area                                            | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | Round 4's decision UI switched from a 3-column grid to a single-column list, preserving lane order top-to-bottom |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | New `bouncePath()` — photons now ricochet between the top and bottom of the field while traveling, instead of a single gentle wobble |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | Travel is faster: per-lane duration cut from 2.4–3.6s to 1.3–2.0s, overall stage window cut from 3000ms to 2200ms |
+
+The 3-column grid reshuffled lane order (e.g. lane 4 landed next to lane 1 instead of below it),
+breaking the spatial memory the player just built watching the photons travel in fixed vertical
+lanes — that reshuffle was the reported misalignment. Fixed by keeping the decision list in the same
+top-to-bottom order as the travel lanes. Separately, `bouncePath()` replaces the old single-wobble
+`top` keyframe with a 5–7 point ricochet path per lane (still starting/ending at the same left
+positions), and every lane's own animated duration was kept strictly under the stage's overall
+`MEMORY_TRAVEL_MS` window (verified via a standalone check that every generated path still starts at
+4% and ends at 92%), so lanes reliably finish their motion before the stage cuts over to deciding
+rather than jumping mid-flight.
+
+## 2026-07-28 (eighteenth same-day pass) — Round 4 split into two independently-scored messages
+
+| Area                                            | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | New `MEMORY_MESSAGES` — the six photons are now two 3-photon message clusters, each positioned in its own visual band (`memoryLaneTop`) |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | Scoring changed from "N of 6 photons right" to "N of 2 messages secured" — a message only counts if *every* photon in its cluster is called correctly |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | Decision screen now groups photons under their message, with a per-message ✓ Secured / ✗ Compromised badge |
+
+One missed swap anywhere in a message's 3-photon cluster now compromises that whole message, not
+just the one bit — matching how a real shared key works (a single tampered bit ruins the entire
+key, not just its own share). The mission still doesn't hard-gate on this round's result; the
+per-message breakdown and the "N of 2 messages secured" line are shown either way before Continue.
+
+## 2026-07-28 (nineteenth same-day pass) — scaled to 5 messages, varied movement per photon
+
+| Area                                            | What changed                                                                     |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | `MEMORY_MESSAGES` expanded from 2 to 5 messages (15 photons total, deliberately overwhelming) |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | New `wavePath()` alongside `bouncePath()` — each photon randomly gets one style or the other, so a cluster's photons don't all move alike |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | Per-photon duration widened from 1.3–2.0s to 1.0–2.4s — genuinely different speeds, not just different bounce heights |
+| `frontend/src/pages/GovernmentFilesMission.jsx`  | `MEMORY_CHANGE_COUNT` scaled 2→5 (preserving the ~1-in-3 ratio) and the 6-entry hardcoded color list replaced with a 9-color palette assigned cyclically across 15 photons |
+
+`messageBand()`/`memoryLaneTop()` generalized to divide the field into `MEMORY_MESSAGES.length` even
+bands instead of two hardcoded ones, so the layout scales automatically if the message count changes
+again. Verified via a standalone check that all 15 photons land in non-overlapping bands and that the
+new max per-photon duration (2.4s) still stays under the stage's travel window (2.7s, bumped from
+2.2s) — otherwise a slow photon could still be mid-bounce when the stage cut to deciding.
