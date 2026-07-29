@@ -62,6 +62,8 @@ function App() {
             <Route path="/mission/3/play" element={<PasswordMission />} />
             <Route path="/mission/3/learn-why" element={<LearnWhy />} />
             <Route path="/mission/3/visualize" element={<VisualizeMore />} />
+            <Route path="/mission/4/play" element={<SupplyChainMission />} />
+            <Route path="/mission/5/play" element={<GovernmentFilesMission />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:id" element={<ResourceDetail />} />
