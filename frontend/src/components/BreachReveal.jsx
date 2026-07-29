@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Check } from 'lucide-react';
 
 const ACTION_DURATION_MS = 850;
 const GAP_MS = 450;
@@ -55,7 +56,7 @@ function BreachReveal({ items, onComplete }) {
                   transition={{ duration: 0.35 }}
                   className="flex flex-wrap items-baseline gap-2"
                 >
-                  <span className="text-emerald-400">✓</span>
+                  <Check className="h-4 w-4 text-emerald-400" strokeWidth={2.5} />
                   <span className="text-red-300">{item.resultLabel}</span>
                   {item.value && <span className="text-slate-500">— {item.value}</span>}
                 </motion.div>

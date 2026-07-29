@@ -9,7 +9,8 @@ import InfoSection from '../components/InfoSection';
 import ComplexityTable from '../components/ComplexityTable';
 import GroverDiagram from '../components/GroverDiagram';
 import BlochSphereMini from '../components/BlochSphereMini';
-import GlossaryTerm from '../components/GlossaryTerm';
+import QuantumDefinition from '../components/QuantumDefinition';
+import Panel from '../components/Panel';
 import {
   PROBABILITY_STEPS,
   SEARCH_SPACE_LABEL,
@@ -18,7 +19,6 @@ import {
   GROVER_SECTIONS,
   GROVER_COMPLEXITY,
   GROVER_TAKEAWAY,
-  QUBIT_STATES,
   QUBIT_SECTIONS,
   QUBIT_TAKEAWAY,
   PROBABILITY_TAKEAWAY,
@@ -43,6 +43,8 @@ function VisualizeMore() {
   const current = PROBABILITY_STEPS[step - 1];
   const iterations = Math.round((step / PROBABILITY_STEPS.length) * TOTAL_ITERATIONS);
   const gaugeValue = activeTab === 'probability' ? current.probability : FINAL_PROBABILITY;
+  const takeaway =
+    activeTab === 'probability' ? PROBABILITY_TAKEAWAY : activeTab === 'grover' ? GROVER_TAKEAWAY : QUBIT_TAKEAWAY;
 
   useEffect(() => {
     const controls = animate(iterationsDisplay, iterations, {
@@ -61,8 +63,8 @@ function VisualizeMore() {
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-        <p className="text-sm uppercase tracking-[0.35em] text-purple-300/80">Mission 1 — Password Vault</p>
-        <h1 className="mt-3 text-4xl font-bold text-white">Visualize It Even More</h1>
+        <p className="text-sm uppercase tracking-[0.35em] text-purple-300/80">Mission 3 — Password Vault</p>
+        <h1 className="mt-3 font-display text-4xl font-bold text-white">Visualize It Even More</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-400">
           Explore the concepts behind quantum search. This is an educational visualization, not a physics simulator.
         </p>
@@ -88,8 +90,8 @@ function VisualizeMore() {
         ))}
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-xl">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <Panel className="p-6">
           <AnimatePresence mode="wait">
             {activeTab === 'probability' && (
               <motion.div
@@ -100,9 +102,9 @@ function VisualizeMore() {
                 transition={{ duration: 0.3 }}
               >
                 <p className="text-sm text-slate-400">
-                  Every dot represents a possible password. The <GlossaryTerm id="oracle" /> marks the correct one,
-                  and <GlossaryTerm id="amplitude" /> amplification raises its <GlossaryTerm id="probability" />{' '}
-                  until <GlossaryTerm id="measurement" /> reveals it.
+                  Every dot represents a possible password. The <QuantumDefinition term="oracle" /> marks the correct one,
+                  and <QuantumDefinition term="amplitude" /> amplification raises its <QuantumDefinition term="probability" />{' '}
+                  until <QuantumDefinition term="measurement" /> reveals it.
                 </p>
 
                 <div className="mt-4 rounded-xl bg-slate-950/60 p-2">
@@ -162,12 +164,6 @@ function VisualizeMore() {
                     Next →
                   </button>
                 </div>
-
-                <div className="mt-6">
-                  <EducationalCard title="💡 What Should I Remember?">
-                    <p>{PROBABILITY_TAKEAWAY}</p>
-                  </EducationalCard>
-                </div>
               </motion.div>
             )}
 
@@ -180,7 +176,7 @@ function VisualizeMore() {
                 transition={{ duration: 0.3 }}
               >
                 <p className="text-sm text-slate-400">
-                  A simplified look at the four stages of a single <GlossaryTerm id="groverIteration" />.
+                  A simplified look at the four stages of a single <QuantumDefinition term="groverIteration" />.
                 </p>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   {GROVER_STEPS.map((s, i) => (
@@ -195,7 +191,7 @@ function VisualizeMore() {
                   ))}
                 </div>
 
-                <div className="mt-6 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+                <div className="mt-6 border-y border-white/[0.06] py-4">
                   <GroverDiagram />
                 </div>
 
@@ -211,12 +207,6 @@ function VisualizeMore() {
                   <p className="mb-3 text-xs uppercase tracking-wide text-slate-500">Example Search Complexity</p>
                   <ComplexityTable classical={GROVER_COMPLEXITY.classical} quantum={GROVER_COMPLEXITY.quantum} />
                 </div>
-
-                <div className="mt-6">
-                  <EducationalCard title="💡 What Should I Remember?">
-                    <p>{GROVER_TAKEAWAY}</p>
-                  </EducationalCard>
-                </div>
               </motion.div>
             )}
 
@@ -228,54 +218,42 @@ function VisualizeMore() {
                 exit={{ opacity: 0, x: -12 }}
                 transition={{ duration: 0.3 }}
               >
-                <p className="text-sm text-slate-400">
-                  A <GlossaryTerm id="qubit" /> can represent 0, 1, or a <GlossaryTerm id="superposition" /> of both
+                <p className="text-center text-sm text-slate-400">
+                  A <QuantumDefinition term="qubit" /> can represent 0, 1, or a <QuantumDefinition term="superposition" /> of both
                   until it's measured.
                 </p>
-                <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                  {QUBIT_STATES.map((qs, i) => (
-                    <motion.div
-                      key={qs.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: i * 0.08 }}
-                      className="rounded-xl border border-slate-700 bg-slate-950/60 p-5 text-center"
-                    >
-                      <p className="font-mono text-2xl text-cyan-300">{qs.label}</p>
-                      <p className="mt-3 text-xs leading-relaxed text-slate-400">{qs.description}</p>
-                    </motion.div>
+
+                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                  {QUBIT_SECTIONS.slice(0, 3).map((section) => (
+                    <InfoSection key={section.id} title={section.title}>
+                      <p>{section.body}</p>
+                    </InfoSection>
                   ))}
                 </div>
 
-                <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_auto]">
-                  <div className="space-y-4">
-                    {QUBIT_SECTIONS.map((section) => (
-                      <InfoSection key={section.id} title={section.title}>
-                        <p>{section.body}</p>
-                      </InfoSection>
-                    ))}
-                  </div>
-                  <div className="flex items-start justify-center rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-                    <BlochSphereMini />
-                  </div>
+                <div className="my-10 flex flex-col items-center gap-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">Live Qubit State</p>
+                  <BlochSphereMini size="lg" />
                 </div>
 
-                <div className="mt-6">
-                  <EducationalCard title="💡 What Should I Remember?">
-                    <p>{QUBIT_TAKEAWAY}</p>
-                  </EducationalCard>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {QUBIT_SECTIONS.slice(3, 6).map((section) => (
+                    <InfoSection key={section.id} title={section.title}>
+                      <p>{section.body}</p>
+                    </InfoSection>
+                  ))}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </Panel>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-6 text-center shadow-xl">
-            <ProbabilityGauge value={gaugeValue} />
-          </div>
+          <Panel className="p-6 text-center">
+            <ProbabilityGauge value={gaugeValue} size={168} />
+          </Panel>
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-xl">
+          <Panel className="p-6">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-400">Search Space</span>
               <span className="font-mono text-cyan-200">{SEARCH_SPACE_LABEL}</span>
@@ -284,11 +262,24 @@ function VisualizeMore() {
               <span className="text-slate-400">Iterations</span>
               <span className="font-mono text-cyan-200">{iterationsDisplay.toLocaleString()}</span>
             </div>
-          </div>
+          </Panel>
 
           <EducationalCard>
             <p>{EDUCATIONAL_NOTE}</p>
           </EducationalCard>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <EducationalCard title="What Should I Remember?">
+                <p>{takeaway}</p>
+              </EducationalCard>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
@@ -296,7 +287,7 @@ function VisualizeMore() {
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/mission/1/learn-why')}
+          onClick={() => navigate('/mission/3/learn-why')}
           className="rounded-full bg-slate-800 px-6 py-3 text-slate-200 transition-colors hover:bg-slate-700"
         >
           ← Previous
@@ -304,10 +295,10 @@ function VisualizeMore() {
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/sandbox')}
+          onClick={() => navigate('/missions')}
           className="rounded-full bg-purple-500 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/30 transition-colors hover:bg-purple-400"
         >
-          Go To Sandbox
+          Finish Mission
         </motion.button>
       </div>
     </main>

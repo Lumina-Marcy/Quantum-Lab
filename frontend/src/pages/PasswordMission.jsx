@@ -1,9 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import {
+  Eye, ArrowLeft, ArrowRight, Smile, ChevronsUpDown,
+  Snowflake, RotateCcw, RotateCw, Siren, Phone, Unplug,
+  TriangleAlert, X, Trophy, KeyRound,
+} from 'lucide-react';
 import QuantumCore from '../components/QuantumCore';
+import Panel from '../components/Panel';
+import QuantumDefinition from '../components/QuantumDefinition';
 import { evaluatePassword } from '../utils/passwordStrength';
-import { ACCOUNTS, DEFENSES, VALUE_META, VALUE_WEIGHTS, curvedStealChance, CASCADE_BONUS_RATIO } from '../utils/triageData';
+import {
+  ACCOUNTS, DEFENSES, VALUE_META, VALUE_WEIGHTS, curvedStealChance, CASCADE_BONUS_RATIO, personalizeAccounts,
+} from '../utils/triageData';
 
 // The breach is not preventable in this mission — every run ends with the master
 // password cracked. Entropy only changes how the narration reads, never the outcome,
@@ -15,7 +24,12 @@ const buildBreachLines = (username, email, assessment) => [
   },
   {
     id: 2, delay: 1400, text: `> Generating quantum superposition across 2^${assessment.entropyBits} password states...`, cls: 'text-green-400',
-    explain: 'The quantum computer holds every possible password matching your password\'s length and character types in play simultaneously.',
+    explain: (
+      <>
+        The <QuantumDefinition term="quantumComputer">quantum computer</QuantumDefinition> holds every possible
+        password matching your password's length and character types in play simultaneously.
+      </>
+    ),
   },
   {
     id: 3, delay: 2500, text: `> Target acquired: ${username} — ${email}`, cls: 'text-yellow-300',
@@ -102,21 +116,21 @@ function generateManagerPassword(length = 28) {
 }
 
 const LIVENESS_ACTIONS = [
-  { id: 'blink', label: 'Blink', icon: '👁️' },
-  { id: 'left', label: 'Turn Left', icon: '⬅️' },
-  { id: 'right', label: 'Turn Right', icon: '➡️' },
-  { id: 'smile', label: 'Smile', icon: '😊' },
-  { id: 'nod', label: 'Nod', icon: '🙂' },
+  { id: 'blink', label: 'Blink', icon: Eye },
+  { id: 'left', label: 'Turn Left', icon: ArrowLeft },
+  { id: 'right', label: 'Turn Right', icon: ArrowRight },
+  { id: 'smile', label: 'Smile', icon: Smile },
+  { id: 'nod', label: 'Nod', icon: ChevronsUpDown },
 ];
 const LIVENESS_SEQUENCE_LENGTH = 3;
 const LIVENESS_TIME_MS = 6000;
 
 const RECOVERY_ACTIONS = [
-  { id: 'freeze', label: 'Freeze Account', icon: '🧊' },
-  { id: 'reset', label: 'Reset Credentials', icon: '🔄' },
-  { id: 'report', label: 'Report Fraud', icon: '🚨' },
-  { id: 'call', label: 'Call Support', icon: '📞' },
-  { id: 'revoke', label: 'Revoke Sessions', icon: '🔌' },
+  { id: 'freeze', label: 'Freeze Account', icon: Snowflake },
+  { id: 'reset', label: 'Reset Credentials', icon: RotateCcw },
+  { id: 'report', label: 'Report Fraud', icon: Siren },
+  { id: 'call', label: 'Call Support', icon: Phone },
+  { id: 'revoke', label: 'Revoke Sessions', icon: Unplug },
 ];
 const RECOVERY_SEQUENCE_LENGTH = 3;
 const RECOVERY_TIME_MS = 6000;
@@ -189,8 +203,8 @@ function SequenceChallenge({ actions, sequenceLength, timeMs, onResolve }) {
       <p className="text-center text-xs text-slate-400">Repeat this sequence before time runs out:</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2 font-mono text-base">
         {sequence.map((action, i) => (
-          <span key={action.id} className={i < progress ? 'text-emerald-400' : 'text-slate-200'}>
-            {action.icon} {action.label}
+          <span key={action.id} className={`inline-flex items-center gap-1.5 ${i < progress ? 'text-emerald-400' : 'text-slate-200'}`}>
+            <action.icon className="h-4 w-4" /> {action.label}
             {i < sequence.length - 1 ? ' →' : ''}
           </span>
         ))}
@@ -204,9 +218,9 @@ function SequenceChallenge({ actions, sequenceLength, timeMs, onResolve }) {
             key={action.id}
             onClick={() => handleClick(action.id)}
             disabled={done}
-            className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-cyan-500/60 disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-cyan-500/60 disabled:opacity-40"
           >
-            {action.icon} {action.label}
+            <action.icon className="h-4 w-4" /> {action.label}
           </button>
         ))}
       </div>
@@ -397,7 +411,7 @@ function percentageColor(probability) {
   return 'text-cyan-300';
 }
 
-function AccountCard({ account, state, cascading, cascadeSourceLabel, onClick }) {
+function AccountCard({ account, state, cascading, cascadeSourceLabel, onClick, onHoverChange }) {
   const meta = STATUS_META[state.status];
   const recoveryAvailable = state.status === 'stolen' && account.reversible && !state.recoveryUsed;
   const clickable = state.status === 'atrisk' || recoveryAvailable;
@@ -407,11 +421,15 @@ function AccountCard({ account, state, cascading, cascadeSourceLabel, onClick })
       layout
       onClick={clickable ? onClick : undefined}
       whileHover={clickable ? { y: -2 } : {}}
-      className={`flex flex-col rounded-2xl border p-5 transition-colors ${clickable ? 'cursor-pointer border-slate-700 bg-slate-900/80 hover:border-cyan-500/60' : 'border-slate-800 bg-slate-900/50'
+      onHoverStart={() => clickable && onHoverChange?.(true)}
+      onHoverEnd={() => clickable && onHoverChange?.(false)}
+      className={`flex flex-col rounded-2xl border p-5 transition-colors ${clickable
+          ? 'cursor-pointer border-white/[0.08] bg-white/[0.03] backdrop-blur-sm hover:border-cyan-400/40'
+          : 'border-white/[0.04] bg-transparent'
         }`}
     >
       <div className="flex items-start justify-between">
-        <span className="text-3xl">{account.icon}</span>
+        <account.icon className="h-8 w-8 text-quantum-cyan" strokeWidth={1.5} />
         <div className="flex flex-col items-end gap-1">
           <ValueBadge value={account.value} />
           <ReversibleBadge reversible={account.reversible} />
@@ -429,8 +447,8 @@ function AccountCard({ account, state, cascading, cascadeSourceLabel, onClick })
           </div>
           <p className="mt-1 text-[11px] text-slate-500">+{account.climbRate} pts every round it's left exposed</p>
           {cascading && (
-            <p className="mt-1 text-[11px] font-semibold text-red-400">
-              ⚠ {cascadeSourceLabel} was stolen — climbing faster now
+            <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-red-400">
+              <TriangleAlert className="h-3 w-3 shrink-0" /> {cascadeSourceLabel} was stolen — climbing faster now
             </p>
           )}
           <p className="mt-2 text-[11px] italic leading-4 text-slate-500">{account.naturalDefenseHint}</p>
@@ -456,7 +474,7 @@ function AccountCard({ account, state, cascading, cascadeSourceLabel, onClick })
   );
 }
 
-function DefensePicker({ account, vault, defenseUses, onChooseSingle, onStartVault, onAddToVault, onSkip, onClose }) {
+function DefensePicker({ account, vault, defenseUses, onChooseSingle, onStartVault, onAddToVault, onSkip, onClose, onHoverChange }) {
   const vaultIsOpenElsewhere = vault.active && !vault.resolved;
   const vaultHasRoom = vault.memberIds.length < DEFENSES.manager.maxTargets;
 
@@ -465,73 +483,80 @@ function DefensePicker({ account, vault, defenseUses, onChooseSingle, onStartVau
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-950/95 p-6 shadow-2xl shadow-black/60"
+      onHoverStart={() => onHoverChange?.(true)}
+      onHoverEnd={() => onHoverChange?.(false)}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-cyan-400/80">Defend</p>
-          <h3 className="mt-1 text-xl font-bold text-white">{account.icon} {account.label}</h3>
+      <Panel className="w-full max-w-lg p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-cyan-400/80">Defend</p>
+            <h3 className="mt-1 flex items-center gap-2 text-xl font-bold text-white">
+              <account.icon className="h-5 w-5 text-quantum-cyan" /> {account.label}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <button onClick={onClose} className="text-slate-500 hover:text-slate-300">✕</button>
-      </div>
 
-      <p className="mt-2 text-xs text-slate-400">{account.naturalDefenseHint}</p>
+        <p className="mt-2 text-xs text-slate-400">{account.naturalDefenseHint}</p>
 
-      <div className="mt-4 space-y-3">
-        {Object.values(DEFENSES).map((def) => {
-          let action = null;
-          let buttonLabel = 'Deploy';
-          let disabledReason = '';
-          const usesLeft = def.maxUses != null ? def.maxUses - (defenseUses[def.id] ?? 0) : null;
+        <div className="mt-5 divide-y divide-white/[0.06]">
+          {Object.values(DEFENSES).map((def) => {
+            let action = null;
+            let buttonLabel = 'Deploy';
+            let disabledReason = '';
+            const usesLeft = def.maxUses != null ? def.maxUses - (defenseUses[def.id] ?? 0) : null;
 
-          if (def.mode === 'vault') {
-            if (vaultIsOpenElsewhere) {
-              if (!vaultHasRoom) disabledReason = 'Vault is full';
-              action = () => onAddToVault(account.id);
-              buttonLabel = 'Add to Vault — Free';
+            if (def.mode === 'vault') {
+              if (vaultIsOpenElsewhere) {
+                if (!vaultHasRoom) disabledReason = 'Vault is full';
+                action = () => onAddToVault(account.id);
+                buttonLabel = 'Add to Vault — Free';
+              } else {
+                action = () => onStartVault(account.id);
+                buttonLabel = 'Start Vault';
+              }
             } else {
-              action = () => onStartVault(account.id);
-              buttonLabel = 'Start Vault';
+              if (usesLeft !== null && usesLeft <= 0) disabledReason = 'No uses left';
+              action = () => onChooseSingle(def.id, account.id);
             }
-          } else {
-            if (usesLeft !== null && usesLeft <= 0) disabledReason = 'No uses left';
-            action = () => onChooseSingle(def.id, account.id);
-          }
 
-          return (
-            <div key={def.id} className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-white">
-                    {def.icon} {def.title}
-                    {usesLeft !== null && (
-                      <span className="ml-2 text-[10px] font-normal uppercase tracking-wide text-slate-500">
-                        {Math.max(0, usesLeft)}/{def.maxUses} left
-                      </span>
-                    )}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-400">{def.tagline}</p>
+            return (
+              <div key={def.id} className="py-4 first:pt-0 last:pb-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-1.5 font-semibold text-white">
+                      <def.icon className="h-4 w-4 text-quantum-cyan" /> {def.title}
+                      {usesLeft !== null && (
+                        <span className="ml-2 text-[10px] font-normal uppercase tracking-wide text-slate-500">
+                          {Math.max(0, usesLeft)}/{def.maxUses} left
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">{def.tagline}</p>
+                  </div>
+                  <button
+                    onClick={action}
+                    disabled={!!disabledReason}
+                    className="shrink-0 rounded-full bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
+                  >
+                    {disabledReason || buttonLabel}
+                  </button>
                 </div>
-                <button
-                  onClick={action}
-                  disabled={!!disabledReason}
-                  className="shrink-0 rounded-full bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
-                >
-                  {disabledReason || buttonLabel}
-                </button>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">{def.explain}</p>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-500">{def.explain}</p>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
 
-      <button
-        onClick={onSkip}
-        className="mt-4 w-full text-center text-xs text-slate-500 underline decoration-dotted hover:text-slate-300"
-      >
-        Skip — leave every exposed account as-is and let this round pass
-      </button>
+        <button
+          onClick={onSkip}
+          className="mt-5 w-full text-center text-xs text-slate-500 underline decoration-dotted hover:text-slate-300"
+        >
+          Skip — leave every exposed account as-is and let this round pass
+        </button>
+      </Panel>
     </motion.div>
   );
 }
@@ -544,13 +569,19 @@ function VaultBanner({ vault, accountsById, onSeal }) {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-600/40 bg-cyan-950/20 px-5 py-4"
+      className="mb-8 flex flex-wrap items-center justify-between gap-3 border-y border-cyan-400/20 py-4"
     >
       <div className="flex items-center gap-3">
-        <span className="text-2xl">🗝️</span>
+        <KeyRound className="h-6 w-6 shrink-0 text-quantum-cyan" />
         <div>
-          <p className="text-sm font-semibold text-cyan-200">
-            Vault open — {members.map((m) => `${m.icon} ${m.label}`).join(', ')}
+          <p className="flex flex-wrap items-center gap-x-1.5 text-sm font-semibold text-cyan-200">
+            <span>Vault open —</span>
+            {members.map((m, i) => (
+              <span key={m.id} className="inline-flex items-center gap-1">
+                <m.icon className="h-3.5 w-3.5" /> {m.label}
+                {i < members.length - 1 ? ',' : ''}
+              </span>
+            ))}
           </p>
           <p className="text-xs text-cyan-400/70">
             {hasRoom
@@ -599,36 +630,41 @@ function RecoveryPrompt({ account, onAttempt, onClose }) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-950/95 p-6 shadow-2xl shadow-black/60"
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-cyan-400/80">Recovery Window</p>
-          <h3 className="mt-1 text-xl font-bold text-white">{account.icon} {account.label}</h3>
+      <Panel className="w-full max-w-lg p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-cyan-400/80">Recovery Window</p>
+            <h3 className="mt-1 flex items-center gap-2 text-xl font-bold text-white">
+              <account.icon className="h-5 w-5 text-quantum-cyan" /> {account.label}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <button onClick={onClose} className="text-slate-500 hover:text-slate-300">✕</button>
-      </div>
 
-      <p className="mt-3 text-sm text-slate-300">
-        This account's data was already stolen, but it's a recoverable loss — freezing, resetting, or reporting it
-        fast enough can still claw it back before the attacker cashes in.
-      </p>
-      <p className="mt-2 text-xs text-slate-500">
-        Attempting recovery still counts as taking your turn — every other exposed account keeps climbing while
-        you're focused here, and you only get one attempt.
-      </p>
+        <p className="mt-3 text-sm text-slate-300">
+          This account's data was already stolen, but it's a recoverable loss — freezing, resetting, or reporting it
+          fast enough can still claw it back before the attacker cashes in.
+        </p>
+        <p className="mt-2 text-xs text-slate-500">
+          Attempting recovery still counts as taking your turn — every other exposed account keeps climbing while
+          you're focused here, and you only get one attempt.
+        </p>
 
-      <div className="mt-5 flex justify-end gap-3">
-        <button onClick={onClose} className="rounded-full px-4 py-2 text-xs text-slate-400 hover:text-slate-200">
-          Not Now
-        </button>
-        <button
-          onClick={onAttempt}
-          className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-        >
-          Attempt Recovery
-        </button>
-      </div>
+        <div className="mt-5 flex justify-end gap-3">
+          <button onClick={onClose} className="rounded-full px-4 py-2 text-xs text-slate-400 hover:text-slate-200">
+            Not Now
+          </button>
+          <button
+            onClick={onAttempt}
+            className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
+          >
+            Attempt Recovery
+          </button>
+        </div>
+      </Panel>
     </motion.div>
   );
 }
@@ -646,7 +682,7 @@ function MinigameOverlay({ kind, targetIds, round, accountsById, password, onFin
 
   function resolve(holds, resultText) {
     setOutcome({ holds, resultText });
-    setTimeout(() => onFinish(holds), 2000);
+    setTimeout(() => onFinish(holds), 2800);
   }
 
   return (
@@ -661,8 +697,14 @@ function MinigameOverlay({ kind, targetIds, round, accountsById, password, onFin
           <p className="text-xs uppercase tracking-widest text-cyan-400/80">
             {kind === 'vault' ? 'Vault Verification' : kind === 'recovery' ? 'Recovery Attempt' : 'Real-Time Defense Check'}
           </p>
-          <h2 className="mt-2 text-xl font-bold text-white">
-            {kind === 'recovery' ? '🔁' : DEFENSES[kind === 'vault' ? 'manager' : kind].icon} {labelList}
+          <h2 className="mt-2 flex items-center justify-center gap-2 text-xl font-bold text-white">
+            {kind === 'recovery'
+              ? <RotateCw className="h-5 w-5 text-quantum-cyan" />
+              : (() => {
+                  const DefenseIcon = DEFENSES[kind === 'vault' ? 'manager' : kind].icon;
+                  return <DefenseIcon className="h-5 w-5 text-quantum-cyan" />;
+                })()}
+            {' '}{labelList}
           </h2>
         </div>
 
@@ -717,7 +759,9 @@ function MinigameOverlay({ kind, targetIds, round, accountsById, password, onFin
               <div className="mt-4 space-y-2">
                 {targets.map((t) => (
                   <div key={t.id} className="rounded-lg border border-cyan-700/40 bg-slate-950/60 p-3 text-center">
-                    <p className="text-[10px] uppercase tracking-widest text-slate-500">{t.icon} {t.label} — Stored In Vault</p>
+                    <p className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-widest text-slate-500">
+                      <t.icon className="h-3 w-3" /> {t.label} — Stored In Vault
+                    </p>
                     <p className="mt-1 break-all font-mono text-sm text-cyan-300">{managerPasswords[t.id]}</p>
                   </div>
                 ))}
@@ -788,11 +832,11 @@ function MinigameOverlay({ kind, targetIds, round, accountsById, password, onFin
 }
 
 function TriageDashboard({
-  accounts, vault, pickerAccountId, recoveryAccountId, activeMinigame, password, canFinishTriage, defenseUses,
-  onOpenPicker, onClosePicker, onChooseSingle, onStartVault, onAddToVault, onSealVault, onSkipRound,
+  accountsMeta, accounts, vault, pickerAccountId, recoveryAccountId, activeMinigame, password, canFinishTriage, defenseUses,
+  onHoverActionable, onOpenPicker, onClosePicker, onChooseSingle, onStartVault, onAddToVault, onSealVault, onSkipRound,
   onOpenRecovery, onCloseRecovery, onAttemptRecovery, onFinishTriage, onMinigameFinish,
 }) {
-  const accountsById = Object.fromEntries(ACCOUNTS.map((a) => [a.id, a]));
+  const accountsById = Object.fromEntries(accountsMeta.map((a) => [a.id, a]));
   const pickerAccount = pickerAccountId ? accountsById[pickerAccountId] : null;
   const recoveryAccount = recoveryAccountId ? accountsById[recoveryAccountId] : null;
 
@@ -803,11 +847,11 @@ function TriageDashboard({
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      <div className="mb-6 text-center">
+    <div className="mx-auto max-w-5xl px-6 py-14">
+      <div className="mb-10 text-center">
         <p className="text-sm uppercase tracking-[0.35em] text-red-400/80">Damage Control</p>
-        <h2 className="mt-2 text-3xl font-bold text-white">You Can't Undo the Breach — Only Triage It</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400">
+        <h2 className="mt-3 font-display text-3xl font-bold text-white sm:text-4xl">You Can't Undo the Breach — Only Triage It</h2>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-400">
           Each percentage is a risk level, not the exact odds — staying low is safer than the number suggests, and
           letting one climb high is more dangerous than the number suggests. It doesn't have to reach 100 to lose.
           Nothing moves until you act: the moment you defend one account, every other account's risk ticks up and gets
@@ -815,10 +859,16 @@ function TriageDashboard({
         </p>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center justify-center gap-4 font-mono text-xs text-slate-400">
-        <span>🔐 2FA: {Math.max(0, DEFENSES.twofa.maxUses - defenseUses.twofa)}/{DEFENSES.twofa.maxUses} left</span>
-        <span>👆 Biometric: {Math.max(0, DEFENSES.biometric.maxUses - defenseUses.biometric)}/{DEFENSES.biometric.maxUses} left</span>
-        <span>🗝️ Password Manager: unlimited seals</span>
+      <div className="mb-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 border-y border-white/[0.06] py-4 font-mono text-xs text-slate-400">
+        <span className="inline-flex items-center gap-1.5">
+          <DEFENSES.twofa.icon className="h-3.5 w-3.5 text-quantum-cyan" /> 2FA: {Math.max(0, DEFENSES.twofa.maxUses - defenseUses.twofa)}/{DEFENSES.twofa.maxUses} left
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <DEFENSES.biometric.icon className="h-3.5 w-3.5 text-quantum-cyan" /> Biometric: {Math.max(0, DEFENSES.biometric.maxUses - defenseUses.biometric)}/{DEFENSES.biometric.maxUses} left
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <DEFENSES.manager.icon className="h-3.5 w-3.5 text-quantum-cyan" /> Password Manager: unlimited seals
+        </span>
       </div>
 
       {vault.active && !vault.resolved && (
@@ -829,7 +879,7 @@ function TriageDashboard({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-600/40 bg-amber-950/20 px-5 py-4"
+          className="mb-8 flex flex-wrap items-center justify-between gap-3 border-y border-amber-500/20 py-4"
         >
           <p className="text-sm text-amber-200">
             Nothing left to defend — but a stolen account above can still be recovered if you act. Move on whenever
@@ -845,7 +895,7 @@ function TriageDashboard({
       )}
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {ACCOUNTS.map((account) => {
+        {accountsMeta.map((account) => {
           const cascading = Boolean(account.cascadeFrom && accounts[account.cascadeFrom]?.status === 'stolen');
           return (
             <AccountCard
@@ -855,6 +905,7 @@ function TriageDashboard({
               cascading={cascading}
               cascadeSourceLabel={cascading ? accountsById[account.cascadeFrom].label : null}
               onClick={() => handleCardClick(account)}
+              onHoverChange={onHoverActionable}
             />
           );
         })}
@@ -879,6 +930,7 @@ function TriageDashboard({
                 onAddToVault={onAddToVault}
                 onSkip={onSkipRound}
                 onClose={onClosePicker}
+                onHoverChange={onHoverActionable}
               />
             </div>
           </motion.div>
@@ -935,12 +987,12 @@ const READINESS_CREDIT = {
 };
 
 const READINESS_TIERS = [
-  { min: 95, grade: 'S', label: 'Quantum-Ready', cls: 'border-cyan-400/50 bg-cyan-950/30 text-cyan-300' },
-  { min: 85, grade: 'A', label: 'Well Defended', cls: 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300' },
-  { min: 70, grade: 'B', label: 'Mostly Secure', cls: 'border-lime-500/40 bg-lime-950/20 text-lime-300' },
-  { min: 50, grade: 'C', label: 'Exposed', cls: 'border-amber-500/40 bg-amber-950/30 text-amber-300' },
-  { min: 30, grade: 'D', label: 'Compromised', cls: 'border-orange-500/40 bg-orange-950/30 text-orange-300' },
-  { min: 0, grade: 'F', label: 'Breach Catastrophe', cls: 'border-red-500/40 bg-red-950/30 text-red-300' },
+  { min: 95, grade: 'S', label: 'Quantum-Ready', cls: 'text-cyan-300' },
+  { min: 85, grade: 'A', label: 'Well Defended', cls: 'text-emerald-300' },
+  { min: 70, grade: 'B', label: 'Mostly Secure', cls: 'text-lime-300' },
+  { min: 50, grade: 'C', label: 'Exposed', cls: 'text-amber-300' },
+  { min: 30, grade: 'D', label: 'Compromised', cls: 'text-orange-300' },
+  { min: 0, grade: 'F', label: 'Breach Catastrophe', cls: 'text-red-300' },
 ];
 
 function readinessBucket(account, state) {
@@ -977,19 +1029,19 @@ function QuantumReadinessPanel({ accounts }) {
   const readiness = useMemo(() => computeQuantumReadiness(accounts), [accounts]);
 
   return (
-    <div className={`mx-auto mb-8 max-w-md rounded-2xl border p-6 ${readiness.cls}`}>
-      <p className="text-center text-xs uppercase tracking-widest opacity-80">Quantum Readiness Score</p>
+    <div className="mx-auto mb-10 max-w-md text-center">
+      <p className="text-xs uppercase tracking-widest text-slate-500">Quantum Readiness Score</p>
       <div className="mt-3 flex items-center justify-center gap-4">
-        <span className="text-5xl font-bold leading-none">{readiness.grade}</span>
-        <span className="text-2xl font-semibold tabular-nums">{readiness.percentage}%</span>
+        <span className={`font-display text-6xl font-bold leading-none ${readiness.cls}`}>{readiness.grade}</span>
+        <span className="text-2xl font-semibold tabular-nums text-slate-300">{readiness.percentage}%</span>
       </div>
-      <p className="mt-1 text-center text-sm font-semibold">{readiness.label}</p>
-      <p className="mt-3 text-center text-[11px] leading-relaxed opacity-80">
+      <p className={`mt-2 text-sm font-semibold ${readiness.cls}`}>{readiness.label}</p>
+      <p className="mx-auto mt-4 max-w-sm text-[11px] leading-relaxed text-slate-500">
         Weighted by how valuable each account was and how it ended up — full credit for staying safe, most of it
         back for a successful recovery, partial credit for a theft that was still recoverable, and none for a
         permanent loss or a lockout.
       </p>
-      <div className="mt-4 flex flex-wrap justify-center gap-3 text-[11px] font-mono">
+      <div className="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[11px] font-mono">
         {READINESS_COUNT_LABELS.filter(([key]) => readiness.counts[key] > 0).map(([key, cls, text]) => (
           <span key={key} className={cls}>{readiness.counts[key]} {text}</span>
         ))}
@@ -998,11 +1050,11 @@ function QuantumReadinessPanel({ accounts }) {
   );
 }
 
-function ConsequencesScreen({ accounts, onReplay }) {
-  const savedCount = ACCOUNTS.filter((a) => accounts[a.id].status === 'safe').length;
-  const irreversibleAccounts = ACCOUNTS.filter((a) => !a.reversible);
+function ConsequencesScreen({ accountsMeta, accounts }) {
+  const savedCount = accountsMeta.filter((a) => accounts[a.id].status === 'safe').length;
+  const irreversibleAccounts = accountsMeta.filter((a) => !a.reversible);
   const irreversibleLost = irreversibleAccounts.filter((a) => accounts[a.id].status !== 'safe');
-  const perfect = savedCount === ACCOUNTS.length;
+  const perfect = savedCount === accountsMeta.length;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center">
@@ -1011,20 +1063,20 @@ function ConsequencesScreen({ accounts, onReplay }) {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', bounce: 0.4 }}
-          className="mb-8 rounded-2xl border border-amber-400/60 bg-gradient-to-b from-amber-950/40 to-slate-950 p-6"
+          className="mb-10 border-b border-amber-400/20 pb-8"
         >
-          <p className="text-4xl">🏆</p>
+          <Trophy className="mx-auto h-9 w-9 text-amber-300" strokeWidth={1.5} />
           <p className="mt-2 text-xs uppercase tracking-widest text-amber-300">Perfect Defense</p>
-          <p className="mt-1 text-lg font-bold text-white">Every single account survived the breach.</p>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-1 font-display text-lg font-bold text-white">Every single account survived the breach.</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
             Rare, and it took every roll going your way — that's exactly why real security doesn't rely on getting lucky.
           </p>
         </motion.div>
       )}
 
       <p className="text-xs uppercase tracking-widest text-cyan-400/80">Aftermath</p>
-      <h1 className="mt-2 text-3xl font-bold text-white">{savedCount}/{ACCOUNTS.length} Accounts Saved</h1>
-      <p className="mt-3 text-sm text-slate-400">
+      <h1 className="mt-3 font-display text-3xl font-bold text-white sm:text-4xl">{savedCount}/{accountsMeta.length} Accounts Saved</h1>
+      <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-slate-400">
         {irreversibleLost.length === 0
           ? `All ${irreversibleAccounts.length} irreversible-loss accounts (${irreversibleAccounts.map((a) => a.label).join(', ')}) were avoided. That prioritization is what mattered most.`
           : `${irreversibleLost.length} of ${irreversibleAccounts.length} irreversible loss${irreversibleLost.length === 1 ? '' : 'es'} occurred — the kind no password reset can undo.`}
@@ -1032,25 +1084,21 @@ function ConsequencesScreen({ accounts, onReplay }) {
 
       <QuantumReadinessPanel accounts={accounts} />
 
-      <div className="mt-8 space-y-3 text-left">
-        {ACCOUNTS.map((account) => {
+      <div className="mt-10 divide-y divide-white/[0.06] border-y border-white/[0.06] text-left">
+        {accountsMeta.map((account) => {
           const state = accounts[account.id];
           const isLoss = state.status === 'stolen' || state.status === 'lockedout';
           const heavy = isLoss && !account.reversible;
-          const cardCls = state.status === 'safe'
-            ? 'border-emerald-500/40 bg-emerald-950/20'
-            : heavy
-              ? 'border-red-600/60 bg-red-950/50'
-              : isLoss
-                ? 'border-amber-500/40 bg-amber-950/20'
-                : 'border-slate-700 bg-slate-900/50';
+          const accentCls = state.status === 'safe' ? 'border-emerald-500/50' : heavy ? 'border-red-500/50' : isLoss ? 'border-amber-500/50' : 'border-slate-700';
           const consequence = state.status === 'lockedout' ? account.lockedOutConsequence : account.lostConsequence;
 
           return (
-            <div key={account.id} className={`rounded-xl border p-4 ${cardCls}`}>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">{account.icon} {account.label}</p>
-                <span className={`text-xs uppercase tracking-wide ${STATUS_META[state.status].cls}`}>
+            <div key={account.id} className={`border-l-2 py-4 pl-4 ${accentCls}`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                  <account.icon className="h-4 w-4 text-quantum-cyan" /> {account.label}
+                </p>
+                <span className={`shrink-0 text-xs uppercase tracking-wide ${STATUS_META[state.status].cls}`}>
                   {STATUS_META[state.status].label}
                   {heavy ? ' — Irreversible Loss' : isLoss ? ' — Recoverable Loss' : ''}
                 </span>
@@ -1069,7 +1117,7 @@ function ConsequencesScreen({ accounts, onReplay }) {
         })}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-slate-700 bg-slate-900/60 p-6 text-left">
+      <div className="mt-10 border-t border-white/[0.06] pt-8 text-left">
         <p className="text-sm font-semibold text-cyan-300">The lesson</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           Damage control means minimizing loss, not preventing it — every decision bought time for one account while
@@ -1078,24 +1126,12 @@ function ConsequencesScreen({ accounts, onReplay }) {
         </p>
       </div>
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <button
-          onClick={onReplay}
-          className="rounded-full bg-slate-800 px-5 py-3 text-slate-200 hover:bg-slate-700"
-        >
-          Run It Back
-        </button>
+      <div className="mt-10 flex items-center justify-center">
         <Link
-          to="/mission/1/learn-why"
-          className="rounded-full bg-purple-500 px-5 py-3 font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:bg-purple-400"
+          to="/mission/3/learn-why"
+          className="rounded-full bg-purple-500 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:bg-purple-400"
         >
           Learn Why →
-        </Link>
-        <Link
-          to="/mission/1"
-          className="rounded-full bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
-        >
-          Finish Mission
         </Link>
       </div>
     </div>
@@ -1111,10 +1147,35 @@ function PasswordMission() {
 
   const assessment = useMemo(() => evaluatePassword(password, username, email), [password, username, email]);
   const lines = useMemo(() => buildBreachLines(username, email, assessment), [assessment, username, email]);
+  // Personalizes 4 of the 10 slots' display labels with whatever service the player said they
+  // use (social/work/streaming/gaming); every mechanic — climbRate, value, cascades — is untouched.
+  const accountsMeta = useMemo(() => personalizeAccounts(ACCOUNTS, profile), [profile]);
 
   const [visibleLines, setVisibleLines] = useState([]);
-  const [phase, setPhase] = useState('breaching'); // 'breaching' | 'breached' | 'triage' | 'consequences'
+  const [phase, setPhase] = useState('readiness'); // 'readiness' | 'breaching' | 'breached' | 'triage' | 'consequences'
   const [crackComplete, setCrackComplete] = useState(false);
+  const [readinessRevealed, setReadinessRevealed] = useState(0);
+  const [readinessSynced, setReadinessSynced] = useState(false);
+
+  // Real numbers, not placeholders — pulled from the same account/password data the rest of
+  // the mission uses, so the readiness check isn't just set dressing.
+  const integrityPct = Math.max(8, Math.min(97, Math.round((assessment.effectiveBits / 42) * 100)));
+  const sensitiveRecords = ACCOUNTS.filter((a) => a.value === 'high').length;
+  const quantumRisk = assessment.quantumResistant ? 'High' : 'Critical';
+  const readinessStats = [
+    {
+      label: 'Vault Integrity',
+      value: `${integrityPct}%`,
+      cls: integrityPct >= 60 ? 'text-emerald-300' : integrityPct >= 35 ? 'text-amber-300' : 'text-red-300',
+    },
+    { label: 'Accounts Protected', value: ACCOUNTS.length, cls: 'text-cyan-300' },
+    { label: 'Sensitive Records', value: sensitiveRecords, cls: 'text-cyan-300' },
+    {
+      label: 'Estimated Quantum Risk',
+      value: quantumRisk,
+      cls: quantumRisk === 'Critical' ? 'text-red-300' : 'text-orange-300',
+    },
+  ];
 
   const [accounts, setAccounts] = useState(initialAccountState);
   const [vault, setVault] = useState({ active: false, memberIds: [], resolved: false, held: null });
@@ -1123,7 +1184,97 @@ function PasswordMission() {
   const [activeMinigame, setActiveMinigame] = useState(null); // { kind, targetIds, round? }
   const [defenseUses, setDefenseUses] = useState({ twofa: 0, biometric: 0 });
 
+  // The Core is the mission's companion, not a mascot — it reacts to what the player does
+  // rather than narrating it. Hovering an actionable card/defense option gives it a subtle
+  // lift; a defense holding or an account falling briefly shifts its stage or triggers a pulse.
+  const [coreStage, setCoreStage] = useState('alive');
+  const [hoveredActionable, setHoveredActionable] = useState(false);
+  const corePulse = useMotionValue(0);
+  const pulseScale = useTransform(corePulse, [0, 1], [0.4, 2.2]);
+  const pulseOpacity = useTransform(corePulse, [0, 0.15, 1], [0, 0.55, 0]);
+  const prevAccountsRef = useRef(null);
+
+  // The Core doubles as the mission's progress indicator, not just its companion: less resolved
+  // during the breach, climbing as accounts are settled through triage, landing on a final
+  // intensity that reflects the actual readiness grade once the run is over.
+  const coreProgress = useMotionValue(0.3);
   useEffect(() => {
+    let target = 0.3;
+    if (phase === 'readiness') {
+      target = 0.3 + 0.5 * (readinessRevealed / readinessStats.length);
+    } else if (phase === 'triage') {
+      const resolved = ACCOUNTS.filter((a) => ['safe', 'stolen', 'lockedout'].includes(accounts[a.id].status)).length;
+      target = 0.3 + 0.6 * (resolved / ACCOUNTS.length);
+    } else if (phase === 'consequences') {
+      target = computeQuantumReadiness(accounts).percentage / 100;
+    }
+    const controls = animate(coreProgress, target, { duration: 1.2, ease: 'easeInOut' });
+    return controls.stop;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, accounts, readinessRevealed]);
+
+  // A high-enough final grade earns the same "stabilizing" green the rest of the app reserves
+  // for genuine success — anything short of that just settles at whatever intensity it earned.
+  useEffect(() => {
+    if (phase !== 'consequences') return;
+    const { grade } = computeQuantumReadiness(accounts);
+    if (grade === 'S' || grade === 'A') setCoreStage('stabilizing');
+  }, [phase]);
+
+  useEffect(() => {
+    const prev = prevAccountsRef.current;
+    prevAccountsRef.current = accounts;
+    if (!prev) return;
+
+    let anyNewlyBad = false;
+    let anyNewlyGood = false;
+    for (const account of ACCOUNTS) {
+      const prevStatus = prev[account.id]?.status;
+      const nextStatus = accounts[account.id]?.status;
+      if (prevStatus === nextStatus) continue;
+      if (nextStatus === 'stolen' || nextStatus === 'lockedout') anyNewlyBad = true;
+      if (nextStatus === 'safe') anyNewlyGood = true;
+    }
+
+    if (anyNewlyBad) {
+      setCoreStage('unstable');
+      const t = setTimeout(() => setCoreStage((s) => (s === 'unstable' ? 'alive' : s)), 1800);
+      return () => clearTimeout(t);
+    }
+    if (anyNewlyGood) {
+      animate(corePulse, [0, 1], { duration: 1.1, ease: 'easeOut' });
+    }
+  }, [accounts]);
+
+  // Mission Readiness Check: Mission Control scans the vault before the attack begins, revealing
+  // one stat at a time, then holds on "Vault synchronized" for a beat — a deliberate transition
+  // from setup to simulation, rather than the breach starting the instant the vault is filled in.
+  useEffect(() => {
+    if (phase !== 'readiness') return;
+    const revealTimers = readinessStats.map((_, i) =>
+      setTimeout(() => setReadinessRevealed((r) => r + 1), 400 + i * 260)
+    );
+    const syncDelay = 400 + readinessStats.length * 260 + 400;
+    const syncTimer = setTimeout(() => {
+      setReadinessSynced(true);
+      setCoreStage('stabilizing');
+      animate(corePulse, [0, 1], { duration: 1.2, ease: 'easeOut' });
+    }, syncDelay);
+    const advanceTimer = setTimeout(() => {
+      setCoreStage('alive');
+      setPhase('breaching');
+    }, syncDelay + 3000);
+
+    return () => {
+      revealTimers.forEach(clearTimeout);
+      clearTimeout(syncTimer);
+      clearTimeout(advanceTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'breaching') return;
     const timers = lines.map((line) =>
       setTimeout(() => setVisibleLines((prev) => [...prev, line]), line.delay)
     );
@@ -1134,7 +1285,8 @@ function PasswordMission() {
       timers.forEach(clearTimeout);
       clearTimeout(t1);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   // One round of Grover's amplification: every still-at-risk account NOT excluded
   // (i.e. not the one just being defended) climbs by its own rate, then is rolled
@@ -1185,7 +1337,7 @@ function PasswordMission() {
   useEffect(() => {
     if (phase !== 'triage' || activeMinigame) return;
     if (allSettled) {
-      const t = setTimeout(() => setPhase('consequences'), 1200);
+      const t = setTimeout(() => setPhase('consequences'), 2000);
       return () => clearTimeout(t);
     }
   }, [phase, accounts, activeMinigame]);
@@ -1278,26 +1430,84 @@ function PasswordMission() {
     setActiveMinigame(null);
   }
 
-  function resetTriage() {
-    setAccounts(initialAccountState());
-    setVault({ active: false, memberIds: [], resolved: false, held: null });
-    setPickerAccountId(null);
-    setRecoveryAccountId(null);
-    setActiveMinigame(null);
-    setDefenseUses({ twofa: 0, biometric: 0 });
-    setPhase('triage');
-  }
-
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen bg-transparent">
       {/* Persistent across every phase (sits outside the AnimatePresence swap below) — the
-          mission's own small mark of the same Quantum Core seen throughout the rest of the app. */}
-      <div className="flex items-center justify-center gap-2 border-b border-slate-800/60 py-3">
-        <QuantumCore stage="alive" className="h-5 w-5" particleCount={5} detail="minimal" />
+          mission's companion, present the whole time and reacting to what the player does. */}
+      <div className="relative flex items-center justify-center gap-4 border-b border-white/[0.06] py-6">
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute h-20 w-20 rounded-full"
+          style={{
+            scale: pulseScale,
+            opacity: pulseOpacity,
+            background: 'radial-gradient(circle, rgba(191,219,254,0.65) 0%, rgba(59,130,246,0.3) 45%, transparent 72%)',
+          }}
+        />
+        <motion.div
+          animate={{ scale: hoveredActionable ? 1.08 : 1, filter: hoveredActionable ? 'brightness(1.25)' : 'brightness(1)' }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        >
+          <QuantumCore stage={coreStage} progress={coreProgress} className="h-14 w-14" particleCount={10} />
+        </motion.div>
         <span className="font-mono text-xs uppercase tracking-[0.3em] text-slate-500">Password Vault</span>
       </div>
       <AnimatePresence mode="wait">
-        {phase === 'breaching' || phase === 'breached' ? (
+        {phase === 'readiness' ? (
+          <motion.div
+            key="readiness"
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.6 }}
+            className="flex min-h-screen flex-col items-center justify-center px-6 py-10"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md text-center"
+            >
+              <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Mission Setup</p>
+              <h1 className="mt-2 font-display text-3xl font-bold text-white">Mission Readiness Check</h1>
+              <p className="mt-3 text-slate-400">
+                Mission Control is scanning your vault before the simulation begins.
+              </p>
+
+              <div className="mt-10 divide-y divide-white/[0.06] border-y border-white/[0.06] text-left">
+                {readinessStats.map((stat, i) => (
+                  <div key={stat.label} className="flex items-center justify-between py-4">
+                    <span className="text-sm text-slate-400">{stat.label}</span>
+                    <AnimatePresence>
+                      {readinessRevealed > i && (
+                        <motion.span
+                          initial={{ opacity: 0, x: 8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className={`font-mono text-lg font-semibold ${stat.cls}`}
+                        >
+                          {stat.value}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-10 h-5">
+                <AnimatePresence>
+                  {readinessSynced && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="font-mono text-sm uppercase tracking-[0.2em] text-cyan-300"
+                    >
+                      Vault synchronized. Awaiting simulation...
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : phase === 'breaching' || phase === 'breached' ? (
           <motion.div
             key="breach"
             exit={{ opacity: 0, scale: 0.98 }}
@@ -1317,7 +1527,7 @@ function PasswordMission() {
               className="w-full max-w-2xl"
             >
               <div className="mb-6 text-center">
-                <p className="text-sm uppercase tracking-[0.35em] text-red-400/80">Mission 1 — Damage Control</p>
+                <p className="text-sm uppercase tracking-[0.35em] text-red-400/80">Mission 3 — Damage Control</p>
                 <h1 className="mt-2 text-3xl font-bold text-white">A Quantum Attack Is Underway</h1>
                 <p className="mt-2 text-slate-400">
                   Targeting <span className="text-cyan-300">{username}</span>
@@ -1433,6 +1643,7 @@ function PasswordMission() {
             transition={{ duration: 0.6 }}
           >
             <TriageDashboard
+              accountsMeta={accountsMeta}
               accounts={accounts}
               vault={vault}
               pickerAccountId={pickerAccountId}
@@ -1441,6 +1652,7 @@ function PasswordMission() {
               password={password}
               canFinishTriage={canFinishTriage}
               defenseUses={defenseUses}
+              onHoverActionable={setHoveredActionable}
               onOpenPicker={openPicker}
               onClosePicker={closePicker}
               onChooseSingle={chooseSingleDefense}
@@ -1462,7 +1674,7 @@ function PasswordMission() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <ConsequencesScreen accounts={accounts} onReplay={resetTriage} />
+            <ConsequencesScreen accountsMeta={accountsMeta} accounts={accounts} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -130,16 +130,16 @@ function QuantumPanel() {
   const pZero = 1 - pOne;
 
   return (
-    <div className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6">
+    <div className="text-center">
       <h3 className="text-lg font-semibold text-white">Superposition & Measurement</h3>
-      <p className="mt-2 text-sm text-slate-400">
+      <p className="mx-auto mt-2 max-w-lg text-sm text-slate-400">
         Move your mouse over the sphere to put the qubit in different superpositions. Measuring it can
         only ever return one of two outcomes, <span className="text-emerald-300">0</span> or{' '}
         <span className="text-rose-300">1</span> — the two small spheres on the right show each outcome's
         odds, updating live as you move.
       </p>
 
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
         <MainQubitSphere angles={angles} onMove={setAngles} onLeave={() => setAngles(DEFAULT_ANGLES)} />
 
         <div className="flex flex-col items-center gap-1 text-xs text-slate-500">
@@ -153,7 +153,7 @@ function QuantumPanel() {
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-slate-500">
+      <p className="mx-auto mt-6 max-w-lg border-t border-white/[0.06] pt-4 text-xs text-slate-500">
         Before you measure, the qubit is a blend of both — the main sphere's arrow can point anywhere.
         After you measure, it's always one or the other, never both: that's the collapse superposition is
         famous for. The odds on the right are exactly <code>cos²(θ/2)</code> and <code>sin²(θ/2)</code>,

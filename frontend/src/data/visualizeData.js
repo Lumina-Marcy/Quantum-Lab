@@ -102,33 +102,3 @@ export const PROBABILITY_TAKEAWAY =
 export const EDUCATIONAL_NOTE =
   "This visualization demonstrates the intuition behind Grover's Algorithm. Rather than checking every possibility one-by-one, quantum algorithms manipulate probability amplitudes so the correct answer becomes more likely when measured.";
 
-export const GLOSSARY = {
-  qubit: {
-    term: 'Qubit',
-    definition: 'The basic unit of quantum information — like a bit, but able to hold a blend of 0 and 1 until measured.',
-  },
-  superposition: {
-    term: 'Superposition',
-    definition: 'A quantum state representing multiple possibilities at once, each with its own probability.',
-  },
-  amplitude: {
-    term: 'Amplitude',
-    definition: "A number describing how likely a quantum outcome is — its square gives the probability you'll measure that outcome.",
-  },
-  measurement: {
-    term: 'Measurement',
-    definition: 'The act of observing a qubit, which collapses its superposition into one definite classical result.',
-  },
-  oracle: {
-    term: 'Oracle',
-    definition: "A step that can recognize the correct answer among many, without needing to reveal it up front.",
-  },
-  groverIteration: {
-    term: 'Grover Iteration',
-    definition: 'One round of oracle-marking plus amplification — repeating this a few times is what raises the correct answer\'s probability.',
-  },
-  probability: {
-    term: 'Probability',
-    definition: 'The chance of a particular outcome when a qubit is measured, ranging from 0% to 100%.',
-  },
-};

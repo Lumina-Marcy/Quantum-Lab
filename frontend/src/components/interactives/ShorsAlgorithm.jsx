@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import QuantumCore from '../QuantumCore';
+import { Search, Zap } from 'lucide-react';
+import Panel from '../Panel';
 
 const MIN_FACTOR = 2;
 const MAX_FACTOR = 9999;
@@ -97,7 +98,7 @@ function ShorsAlgorithm() {
 
   return (
     <div className="space-y-6">
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+      <p className="mx-auto max-w-xl text-center text-sm text-slate-400">
         Multiplying two numbers together has exactly <span className="text-cyan-300">one answer</span>, computed
         directly. Going the other way — starting from the result and asking "what was multiplied to get this?" —
         has no shortcut: a classical computer has to guess candidate divisors <span className="text-cyan-300">one
@@ -107,7 +108,7 @@ function ShorsAlgorithm() {
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Multiplication — the easy direction */}
-        <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-5">
+        <Panel className="p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400/80">Multiplication</p>
           <p className="mt-1 text-sm text-slate-400">The easy direction — one answer, instantly.</p>
 
@@ -143,20 +144,20 @@ function ShorsAlgorithm() {
             </button>
           </form>
 
-          <div className="mt-5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-4 text-center">
+          <div className="mt-5 border-t border-cyan-400/20 pt-4 text-center">
             <p className="text-xs uppercase tracking-widest text-cyan-400/70">Result — the only answer</p>
             <p className="mt-1 font-mono text-2xl font-bold text-white">
               {formatNumber(committedA)} × {formatNumber(committedB)} = {formatNumber(product)}
             </p>
           </div>
-        </div>
+        </Panel>
 
         {/* Factorization — the hard direction */}
-        <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-5">
+        <Panel className="p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-fuchsia-400/80">Factorization</p>
           <p className="mt-1 text-sm text-slate-400">The hard direction — guess divisors one at a time.</p>
 
-          <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-4 text-center">
+          <div className="mt-4 border-t border-white/[0.06] pt-4 text-center">
             <p className="text-xs uppercase tracking-widest text-slate-500">What was multiplied to get…</p>
             <p className="mt-1 font-mono text-2xl font-bold text-white">{formatNumber(product)}</p>
             <p className="mt-1 text-[11px] text-slate-500">?</p>
@@ -181,16 +182,18 @@ function ShorsAlgorithm() {
             <button
               onClick={startClassicalSearch}
               disabled={isSearching}
-              className="flex-1 rounded-full bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50"
             >
-              {isSearching ? 'Searching…' : '🔍 Search classically'}
+              {!isSearching && <Search className="h-4 w-4" />}
+              {isSearching ? 'Searching…' : 'Search classically'}
             </button>
             <button
               onClick={runQuantumSearch}
               disabled={isSearching}
-              className="flex-1 rounded-full bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 hover:bg-violet-400 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 hover:bg-violet-400 disabled:opacity-50"
             >
-              ⚡ Run Shor's Algorithm
+              <Zap className="h-4 w-4" />
+              Run Shor's Algorithm
             </button>
           </div>
 
@@ -219,7 +222,7 @@ function ShorsAlgorithm() {
               <p className="text-[11px] text-slate-600">No factor pairs found yet — start a search above.</p>
             )}
           </div>
-        </div>
+        </Panel>
       </div>
 
       <AnimatePresence>
@@ -227,24 +230,17 @@ function ShorsAlgorithm() {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`rounded-2xl border p-5 ${
-              status === 'quantum'
-                ? 'border-violet-500/50 bg-violet-950/20'
-                : 'border-emerald-500/50 bg-emerald-950/20'
-            }`}
+            className={`border-l-2 py-1 pl-4 ${status === 'quantum' ? 'border-violet-400/50' : 'border-emerald-400/50'}`}
           >
             {status === 'quantum' ? (
-              <div className="flex items-start gap-3">
-                <QuantumCore stage="alive" className="h-9 w-9 flex-shrink-0" particleCount={6} detail="minimal" />
-                <p className="text-sm leading-relaxed text-slate-200">
-                  <span className="font-semibold text-violet-300">Shor's algorithm found it immediately</span> —
-                  it didn't guess divisors one at a time at all. Using quantum superposition, it finds the
-                  <em> period</em> of a related function in one shot, and that period hands back the factors
-                  directly. The classical search's runtime explodes as the number gets more digits; Shor's
-                  runtime barely grows at all. That asymmetry is exactly why {formatNumber(product)} — and every
-                  RSA key built the same way — falls to a large enough quantum computer.
-                </p>
-              </div>
+              <p className="text-sm leading-relaxed text-slate-200">
+                <span className="font-semibold text-violet-300">Shor's algorithm found it immediately</span> —
+                it didn't guess divisors one at a time at all. Using quantum superposition, it finds the
+                <em> period</em> of a related function in one shot, and that period hands back the factors
+                directly. The classical search's runtime explodes as the number gets more digits; Shor's
+                runtime barely grows at all. That asymmetry is exactly why {formatNumber(product)} — and every
+                RSA key built the same way — falls to a large enough quantum computer.
+              </p>
             ) : (
               <p className="text-sm leading-relaxed text-slate-200">
                 Found it — but only after checking {formatNumber(sqrtProduct)} candidate divisors one at a time.
@@ -260,7 +256,7 @@ function ShorsAlgorithm() {
         )}
       </AnimatePresence>
 
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4 text-sm leading-relaxed text-slate-300">
+      <p className="mx-auto max-w-xl border-t border-white/[0.06] pt-4 text-center text-sm leading-relaxed text-slate-400">
         <span className="font-semibold text-white">Why this threatens encryption today: </span>
         RSA encryption locks your data behind a huge number that's the product of two secret primes — secure only
         because no classical computer can factor it back apart in a useful amount of time. A quantum computer

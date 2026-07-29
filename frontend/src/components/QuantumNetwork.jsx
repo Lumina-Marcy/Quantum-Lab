@@ -88,6 +88,7 @@ function QuantumNetwork() {
                 cx={node.x}
                 cy={node.y}
                 fill={active ? '#67e8f9' : '#94a3b8'}
+                initial={{ r: active ? 2.4 : 1, opacity: active ? 0.85 : 0.35 }}
                 animate={{
                   r: active ? [2.4, 3.4, 2.4] : [1, 1.5, 1],
                   opacity: active ? [0.85, 1, 0.85] : [0.35, 0.75, 0.35],

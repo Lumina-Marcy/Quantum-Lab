@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import Panel from '../Panel';
+import QuantumDefinition from '../QuantumDefinition';
 
 const TILT = (25 * Math.PI) / 180;
 const MINI_SIZE = 110;
@@ -218,8 +220,8 @@ function Interference() {
 
   return (
     <div className="space-y-6">
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
-        Quantum algorithms don't just get lucky — they use <span className="text-cyan-300">interference</span> to
+      <p className="mx-auto max-w-xl text-center text-sm text-slate-400">
+        Quantum algorithms don't just get lucky — they use <QuantumDefinition term="interference">interference</QuantumDefinition> to
         make correct answers more likely and wrong answers less likely, by combining wavefunctions so they
         reinforce (<span className="text-emerald-300">constructive</span>) or cancel
         (<span className="text-rose-300">destructive</span>) each other out. Step through the process below.
@@ -255,14 +257,14 @@ function Interference() {
         </button>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-6 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+      <Panel className="flex flex-wrap justify-center gap-6 p-4">
         {anglesList.map((angles, i) => (
           <QubitSphere key={i} index={i} angles={angles} onMove={handleMove} color={QUBIT_COLORS[i]} />
         ))}
-      </div>
+      </Panel>
 
       {step >= 1 && (
-        <div className="space-y-2 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+        <Panel className="space-y-2 p-4">
           <p className="text-center text-xs uppercase tracking-[0.3em] text-slate-400">Individual wavefunctions</p>
           {anglesList.map((angles, i) => (
             <svg key={i} viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`} className="w-full">
@@ -278,11 +280,11 @@ function Interference() {
               />
             </svg>
           ))}
-        </div>
+        </Panel>
       )}
 
       {step >= 2 && (
-        <div className="rounded-2xl border border-cyan-500/40 bg-slate-950/70 p-4">
+        <Panel className="p-4">
           <p className="mb-2 text-center text-xs uppercase tracking-[0.3em] text-cyan-300/80">
             Overall wavefunction (average of all the qubits above)
           </p>
@@ -298,7 +300,7 @@ function Interference() {
               transition={{ duration: 1, ease: 'easeInOut' }}
             />
           </svg>
-        </div>
+        </Panel>
       )}
 
       {step >= 3 && (
@@ -306,8 +308,8 @@ function Interference() {
           <p className="mb-2 text-center text-sm uppercase tracking-[0.3em] text-cyan-300/80">
             Probability distribution
           </p>
-          <div className="overflow-x-auto rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
-            <div className="flex h-40 items-end justify-center gap-1.5" style={{ minWidth: distribution.length * 40 }}>
+          <Panel className="overflow-x-auto p-4">
+            <div className="mx-auto flex h-40 items-end justify-center gap-1.5" style={{ minWidth: distribution.length * 40 }}>
               {distribution.map(({ bits, prob }) => {
                 const isMeasured = measured === bits;
                 return (
@@ -329,7 +331,7 @@ function Interference() {
                 );
               })}
             </div>
-          </div>
+          </Panel>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
             <button
@@ -347,7 +349,7 @@ function Interference() {
         </div>
       )}
 
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4 text-sm leading-relaxed text-slate-300">
+      <p className="mx-auto max-w-xl border-t border-white/[0.06] pt-4 text-center text-sm leading-relaxed text-slate-400">
         {explanations[step]}
       </p>
 

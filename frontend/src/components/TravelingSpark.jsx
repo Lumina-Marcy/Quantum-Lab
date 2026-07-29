@@ -6,6 +6,7 @@ function TravelingSpark({ x1, y1, x2, y2, duration = 2, delay = 0, color = '#67e
     <motion.circle
       r={radius}
       fill={color}
+      initial={{ cx: x1, cy: y1, opacity: 0 }}
       animate={{ cx: [x1, x2], cy: [y1, y2], opacity: [0, 1, 1, 0] }}
       transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
     />

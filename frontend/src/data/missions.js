@@ -2,7 +2,7 @@
 // Mission Hub, and the per-mission onboarding page.
 export const MISSIONS = [
   {
-    id: '3',
+    id: '1',
     title: 'Lost Medical Breakthrough',
     summary: 'Somewhere in millions of molecular combinations is a cure. Find it before time runs out.',
     estimatedTime: '~1 min',
@@ -20,7 +20,7 @@ export const MISSIONS = [
     terminalLines: ['Search Space: 1,000,000 Paths', 'Quantum Advantage: Expected'],
   },
   {
-    id: '1',
+    id: '3',
     title: 'Password Vault',
     summary: "A quantum computer is trying to break into your vault. Can today's encryption survive tomorrow's technology?",
     estimatedTime: '5 min',
