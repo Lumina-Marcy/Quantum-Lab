@@ -704,22 +704,29 @@ function MazeMission() {
     return () => clearTimeout(timeout);
   }, [phase, comparisonClassicalIndex, comparisonQuantumIndex, winnerPath, classicalHistory]);
 
-  // Coarse mission-long arc: dim during the intro, climbing with maze coverage through the walk,
+  // Coarse mission-long arc: dim during the intro, climbing with maze coverage through each walk,
   // a further lift once a branch is found and replaying, landing on the final efficiency grade.
   useEffect(() => {
     let target = 0.3;
-    if (phase === 'walking') {
-      target = 0.3 + 0.6 * (visited.size / TOTAL_CELLS);
-    } else if (phase === 'replaying') {
+    if (phase === 'classical-walking') {
+      target = 0.3 + 0.6 * (classicalVisited.size / TOTAL_CELLS);
+    } else if (phase === 'quantum-walking') {
+      target = 0.3 + 0.6 * (quantumVisited.size / TOTAL_CELLS);
+    } else if (phase === 'comparison') {
       target = 0.9;
-    } else if (phase === 'resolved' && resolution) {
-      const grade = computeWalkGrade(resolution.steps, resolution.parSteps, resolution.coverageRatio, resolution.timeRemainingRatio);
+    } else if (phase === 'resolved' && quantumResolution) {
+      const grade = computeWalkGrade(
+        quantumResolution.steps,
+        quantumResolution.parSteps,
+        quantumResolution.coverageRatio,
+        quantumResolution.timeRemainingRatio
+      );
       target = grade.percentage / 100;
       if (grade.grade === 'S' || grade.grade === 'A') setCoreStage('stabilizing');
     }
     const controls = animate(coreProgress, target, { duration: 1.2, ease: 'easeInOut' });
     return controls.stop;
-  }, [phase, visited, resolution]);
+  }, [phase, classicalVisited, quantumVisited, quantumResolution]);
 
   function handleIntroComplete() {
     setTimeout(() => setPhase('classical-walking'), 600);
