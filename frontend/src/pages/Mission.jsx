@@ -506,6 +506,10 @@ function MissionWalkthrough({ onBegin }) {
 // Vault additionally needs UserDataForm above (it seeds the vault the breach narration reads
 // from); other playable missions need no such setup step and can jump straight to a Start button.
 const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play', 3: '/mission/3/play' };
+// Missions with a working gameplay page — the map value is the route to launch into. Mission 1
+// additionally needs UserDataForm above (it seeds the vault the breach narration reads from);
+// other playable missions need no such setup step and can jump straight to a Start button.
+const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play', 3: '/mission/3/play', 4: '/mission/4/play' };
 
 function Mission() {
   const { id } = useParams();

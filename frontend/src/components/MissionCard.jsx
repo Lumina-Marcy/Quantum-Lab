@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Network, Microscope, Database, Shield, Clock, LockKeyhole } from 'lucide-react';
+import { Lock, Network, Microscope, Truck, Shield, Clock, LockKeyhole } from 'lucide-react';
 import Panel from './Panel';
 import SequentialLines from './SequentialLines';
 import { STATUS_LABELS } from '../data/missions';
 import { systemReadySignal } from '../utils/systemReadySignal';
 
-const MISSION_ICONS = { 1: Microscope, 2: Network, 3: Lock, 4: Database, 5: Shield };
+const MISSION_ICONS = { 1: Lock, 2: Network, 3: Microscope, 4: Truck, 5: Shield };
 
 // A small handful of particles escaping the icon badge on hover — the same fixed-array,
 // transform-only idiom as QuantumCore.jsx's own `ESCAPEES` (3 DOM nodes for the component's

@@ -12,21 +12,26 @@ import {
   TIMER_SECONDS,
   MOVE_COOLDOWN_MS,
   REPLAY_STEP_MS,
-  DELTAS,
   cellKey,
   generateMaze,
   createTokens,
   stepTokens,
+  stepClassical,
   computeWalkGrade,
+  CLASSICAL_SCORE_WEIGHTS,
 } from '../utils/mazeData';
 
 const INTRO_LINES = [
   "> No map. Just a start, and an exit beacon you can already see through the fog.",
-  "> You're one qubit — but every junction splits you into one branch per path forward, all under the same controls.",
-  "> Cover as much of the maze as you can, in as few shared moves as you can, until one branch finds the exit.",
+  "> Right now you're just you — one position, real walls, no shortcuts. Find the exit however you can.",
+  "> However many wrong turns it takes along the way, that's what a search costs when nothing's split in parallel.",
 ];
 
-const ACTIVE_PHASES = ['walking'];
+const QUANTUM_INTRO_LINES = [
+  "> Same kind of maze, brand new layout — but you're not walking this one alone.",
+  "> You're one qubit now. Every junction splits you into one branch per path forward, all under the same shared controls.",
+  "> Cover as much of the maze as you can, in as few shared moves as you can, until one branch finds the exit.",
+];
 
 const KEY_TO_DIR = {
   ArrowUp: 'N', w: 'N', W: 'N',
@@ -44,8 +49,14 @@ const CONCEPT_MESSAGES = {
     "> One branch just reached the exit — that's the measurement. Every other branch collapses away, and the maze now replays that single lineage's path: the classical answer a measurement collapses down to.",
 };
 
+const EMPTY_CONCEPT_STATS = { splits: 0, locks: 0 };
+
 function makeInitialMaze() {
   return generateMaze(MAZE_SIZE);
+}
+
+function makeInitialVisited(maze) {
+  return new Set([cellKey(maze.start.row, maze.start.col)]);
 }
 
 function Cell({ cell, isExit, isRevealed, tokensHere, isReplayMarker }) {
@@ -111,11 +122,39 @@ function Cell({ cell, isExit, isRevealed, tokensHere, isReplayMarker }) {
   );
 }
 
-function DirectionPad({ onMove, disabled, onHoverChange }) {
-  const hoverProps = {
-    onPointerEnter: () => onHoverChange?.(true),
-    onPointerLeave: () => onHoverChange?.(false),
-  };
+function renderGrid({ maze, visited, tokens = [], markerPos = null }) {
+  return (
+    <div
+      className="grid overflow-hidden rounded-2xl bg-slate-950 ring-1 ring-slate-800"
+      style={{
+        gridTemplateColumns: `repeat(${maze.size}, minmax(0, 1fr))`,
+        width: 'min(92vw, 520px)',
+        gap: '1px',
+      }}
+    >
+      {maze.cells.flat().map((cell) => {
+        const key = cellKey(cell.row, cell.col);
+        const isExit = maze.exit.row === cell.row && maze.exit.col === cell.col;
+        const isMarker = !!markerPos && markerPos.row === cell.row && markerPos.col === cell.col;
+        const isRevealed = visited.has(key) || isMarker;
+        const cellTokens = tokens.filter((t) => t.row === cell.row && t.col === cell.col);
+
+        return (
+          <Cell
+            key={key}
+            cell={cell}
+            isExit={isExit}
+            isRevealed={isRevealed}
+            tokensHere={cellTokens}
+            isReplayMarker={isMarker}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function DirectionPad({ onMove, disabled }) {
   return (
     <div className="grid w-40 grid-cols-3 grid-rows-2 gap-1.5">
       <div />
@@ -200,12 +239,43 @@ function ConceptLegend() {
   );
 }
 
+function StatCards({ timeLeft, stepCount, coveragePercent, stepsExtra }) {
+  return (
+    <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <p className="text-xs uppercase tracking-wide text-slate-500">Time Remaining</p>
+        <p className="mt-1 text-lg font-semibold text-white">{timeLeft}s</p>
+        <div className="mt-2">
+          <ProgressBar
+            value={(timeLeft / TIMER_SECONDS) * 100}
+            gradient={timeLeft <= TIMER_SECONDS * 0.25 ? 'from-red-600 to-red-400' : 'from-amber-500 to-amber-300'}
+            duration={0.4}
+          />
+        </div>
+      </div>
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <p className="text-xs uppercase tracking-wide text-slate-500">Steps Taken</p>
+        <p className="mt-1 text-lg font-semibold text-cyan-200">{stepCount}</p>
+        {stepsExtra && <p className="mt-1 text-[11px] text-slate-500">{stepsExtra}</p>}
+      </div>
+      <div className="rounded-2xl bg-slate-900/70 p-4">
+        <p className="text-xs uppercase tracking-wide text-slate-500">Maze Coverage</p>
+        <p className="mt-1 text-lg font-semibold text-purple-200">{coveragePercent}%</p>
+        <div className="mt-2">
+          <ProgressBar value={coveragePercent} gradient="from-purple-500 to-cyan-300" duration={0.3} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SearchGradePanel({ resolution }) {
   const grade = computeWalkGrade(
     resolution.steps,
     resolution.parSteps,
     resolution.coverageRatio,
-    resolution.timeRemainingRatio
+    resolution.timeRemainingRatio,
+    resolution.weights
   );
 
   return (
@@ -215,68 +285,129 @@ function SearchGradePanel({ resolution }) {
         <span className={`font-display text-6xl font-bold leading-none ${grade.cls}`}>{grade.grade}</span>
         <span className="text-2xl font-semibold tabular-nums text-slate-300">{grade.percentage}%</span>
       </div>
-      <p className={`mt-2 text-sm font-semibold ${grade.cls}`}>{grade.label}</p>
-      <p className="mx-auto mt-4 max-w-sm text-[11px] leading-relaxed text-slate-500">
-        Weighted by how much of the maze your branches covered ({resolution.coveragePercent}%), how few shared-control
-        steps it took, and how much of the shared clock you had left.
+      <p className="mt-1 text-center text-sm font-semibold">{grade.label}</p>
+      <p className="mt-3 text-center text-[11px] leading-relaxed opacity-80">
+        Weighted by how much of the maze you covered ({resolution.coveragePercent}%), how few steps it took, and how
+        much of the clock you had left.
       </p>
     </div>
   );
 }
 
-function ConceptRecap({ stats, coveragePercent, cellsCovered }) {
-  const items = [
-    { key: 'splits', label: 'Junction splits', value: stats.splits },
-    { key: 'locks', label: 'Branches locked (dead ends)', value: stats.locks },
-    { key: 'cellsCovered', label: 'Cells covered', value: cellsCovered },
-    { key: 'coveragePercent', label: 'Maze coverage', value: `${coveragePercent}%` },
-  ];
+function StatRecap({ title, items }) {
   return (
-    <div className="mt-6 grid grid-cols-2 divide-x divide-y divide-white/[0.06] border border-white/[0.06] text-left sm:grid-cols-4 sm:divide-y-0">
-      {items.map((it) => (
-        <div key={it.key} className="p-4">
-          <p className="text-lg font-semibold text-cyan-200">{it.value}</p>
-          <p className="mt-1 text-[11px] leading-snug text-slate-400">{it.label}</p>
-        </div>
-      ))}
+    <div className="mt-6">
+      {title && <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">{title}</p>}
+      <div className="grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
+        {items.map((it) => (
+          <div key={it.key} className="rounded-xl bg-slate-900/60 p-3">
+            <p className="text-lg font-semibold text-cyan-200">{it.value}</p>
+            <p className="mt-1 text-[11px] leading-snug text-slate-400">{it.label}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function ResolutionScreen({ resolution, onReplay }) {
-  const { won, steps, coveragePercent, cellsCovered, conceptStats } = resolution;
+function ClassicalResolutionScreen({ resolution, onContinue }) {
+  const { won, steps, coveragePercent, cellsCovered } = resolution;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center">
-      <p className="text-xs uppercase tracking-widest text-cyan-400/80">{won ? 'Exit Found' : 'Time Expired'}</p>
-      <h1 className="mt-3 font-display text-3xl font-bold text-white sm:text-4xl">
-        {won ? `Found It In ${steps} Steps` : 'The Search Ran Out Of Time'}
+      <p className="text-xs uppercase tracking-widest text-cyan-400/80">
+        {won ? 'Exit Found — Solo' : 'Time Expired — Solo'}
+      </p>
+      <h1 className="mt-2 text-3xl font-bold text-white">
+        {won ? `Found It In ${steps} Steps, Alone` : 'The Solo Search Ran Out Of Time'}
       </h1>
       <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-slate-400">
         {won
-          ? `One branch reached the exit after ${steps} shared-control steps, covering ${coveragePercent}% of the maze (${cellsCovered} cells) along the way.`
-          : 'The clock hit zero before any branch reached the exit. Ground your branches never covered stays fog forever — the same wall a classical search hits, just distributed across whatever branches you kept alive.'}
+          ? `No splitting, no shortcuts — just you, backtracking out of every wrong turn, covering ${coveragePercent}% of the maze (${cellsCovered} cells) along the way.`
+          : `The clock hit zero before you found the exit on your own. Whatever ground you covered — ${coveragePercent}% of the maze — is locked in below.`}
       </p>
 
       <SearchGradePanel resolution={resolution} />
 
-      <div className="mt-10 border-t border-white/[0.06] pt-8 text-left">
+      <p className="text-sm text-slate-400">
+        Now you get a qubit that splits at every junction. Same kind of problem, a very different way through it.
+      </p>
+
+      <div className="mt-8 flex items-center justify-center">
+        <button
+          onClick={onContinue}
+          className="rounded-full bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
+        >
+          Begin Quantum Phase →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FinalResolutionScreen({ classicalResolution, quantumResolution, onReplay }) {
+  const won = quantumResolution.won;
+
+  const classicalStatItems = [
+    { key: 'steps', label: 'Steps taken (solo)', value: classicalResolution.steps },
+    { key: 'deadEnds', label: 'Dead ends entered', value: classicalResolution.deadEndsEntered },
+    { key: 'cellsCovered', label: 'Cells covered', value: classicalResolution.cellsCovered },
+    { key: 'coveragePercent', label: 'Maze coverage', value: `${classicalResolution.coveragePercent}%` },
+  ];
+  const quantumStatItems = [
+    { key: 'splits', label: 'Junction splits', value: quantumResolution.conceptStats.splits },
+    { key: 'locks', label: 'Branches locked (dead ends)', value: quantumResolution.conceptStats.locks },
+    { key: 'cellsCovered', label: 'Cells covered', value: quantumResolution.cellsCovered },
+    { key: 'coveragePercent', label: 'Maze coverage', value: `${quantumResolution.coveragePercent}%` },
+  ];
+
+  return (
+    <div className="mx-auto max-w-4xl px-6 py-16 text-center">
+      <p className="text-xs uppercase tracking-widest text-cyan-400/80">
+        {won ? 'Exit Found — Both Runs Complete' : 'Time Expired'}
+      </p>
+      <h1 className="mt-2 text-3xl font-bold text-white">
+        {won
+          ? `Solo: ${classicalResolution.steps} Steps · Quantum: ${quantumResolution.steps} Steps`
+          : 'The Quantum Search Ran Out Of Time'}
+      </h1>
+      <p className="mt-3 text-sm text-slate-400">
+        First you searched blind — {classicalResolution.steps} steps, {classicalResolution.coveragePercent}% of the
+        maze, {classicalResolution.deadEndsEntered} dead ends walked into and back out of. Then the same kind of
+        problem, solved with a qubit that splits at every junction:{' '}
+        {won
+          ? `${quantumResolution.steps} shared-control steps, ${quantumResolution.coveragePercent}% covered, one branch measuring the exit.`
+          : 'time ran out before any branch reached the exit.'}
+      </p>
+
+      <div className="mt-8 grid gap-6 sm:grid-cols-2">
+        <div>
+          <p className="mb-2 text-xs uppercase tracking-widest text-slate-500">Solo Run</p>
+          <SearchGradePanel resolution={classicalResolution} />
+        </div>
+        <div>
+          <p className="mb-2 text-xs uppercase tracking-widest text-slate-500">Quantum Run</p>
+          <SearchGradePanel resolution={quantumResolution} />
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-slate-700 bg-slate-900/60 p-6 text-left">
         <p className="text-sm font-semibold text-cyan-300">How this actually works</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
-          Walking one corridor at a time and backtracking on dead ends is classical search — worst case, you'd visit
-          close to every one of this maze's <strong>{TOTAL_CELLS} cells</strong> before finding the exit. Every
-          junction you hit instead split your qubit into one branch per path, all advancing <em>simultaneously</em>{' '}
-          under the same shared controls instead of one at a time — the same trick that lets quantum walks explore a
-          search space in parallel instead of serially.
+          Walking one corridor at a time and backtracking on dead ends is classical search — that's what your solo run
+          just was. Every junction in the quantum run instead split your qubit into one branch per path, all advancing{' '}
+          <em>simultaneously</em> under the same shared controls instead of one at a time — the same trick that lets
+          quantum walks explore a search space in parallel instead of serially.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-300">
-          Every mechanic in this run — a junction splitting your qubit, a dead-end branch locking in place for good,
-          and the single branch that reached the exit collapsing every other branch away and replaying as one
+          Every mechanic in the quantum run — a junction splitting your qubit, a dead-end branch locking in place for
+          good, and the single branch that reached the exit collapsing every other branch away and replaying as one
           classical path — is the same machinery behind quantum search, not just flavor text: superposition,
           decoherence, and measurement. Mission 1 uses this exact same machinery to search millions of molecular
           structures for a cure. This maze is the mechanism; that mission is the payoff.
         </p>
-        <ConceptRecap stats={conceptStats} coveragePercent={coveragePercent} cellsCovered={cellsCovered} />
+        <StatRecap title="Solo Run" items={classicalStatItems} />
+        <StatRecap title="Quantum Run" items={quantumStatItems} />
       </div>
 
       <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -294,27 +425,34 @@ function ResolutionScreen({ resolution, onReplay }) {
   );
 }
 
-const EMPTY_CONCEPT_STATS = { splits: 0, locks: 0 };
-
-function makeInitialVisited(maze) {
-  return new Set([cellKey(maze.start.row, maze.start.col)]);
-}
-
 function MazeMission() {
-  const [phase, setPhase] = useState('intro'); // 'intro' | 'walking' | 'replaying' | 'resolved'
-  const [maze, setMaze] = useState(makeInitialMaze);
+  // 'intro' | 'classical-walking' | 'classical-resolved' | 'quantum-intro' | 'quantum-walking' | 'comparison' | 'resolved'
+  const [phase, setPhase] = useState('intro');
 
-  const [tokens, setTokens] = useState(() => createTokens(maze));
-  const [visited, setVisited] = useState(() => makeInitialVisited(maze));
-  const [stepCount, setStepCount] = useState(0);
+  // Classical (solo) run
+  const [classicalMaze, setClassicalMaze] = useState(makeInitialMaze);
+  const [classicalPos, setClassicalPos] = useState(() => ({ ...classicalMaze.start }));
+  const [classicalVisited, setClassicalVisited] = useState(() => makeInitialVisited(classicalMaze));
+  const [classicalHistory, setClassicalHistory] = useState(() => [{ ...classicalMaze.start }]);
+  const [classicalStepCount, setClassicalStepCount] = useState(0);
+  const [classicalTimeLeft, setClassicalTimeLeft] = useState(TIMER_SECONDS);
+  const [classicalResolution, setClassicalResolution] = useState(null);
 
+  // Quantum (splitting) run
+  const [quantumMaze, setQuantumMaze] = useState(makeInitialMaze);
+  const [quantumTokens, setQuantumTokens] = useState(() => createTokens(quantumMaze));
+  const [quantumVisited, setQuantumVisited] = useState(() => makeInitialVisited(quantumMaze));
+  const [quantumStepCount, setQuantumStepCount] = useState(0);
+  const [quantumTimeLeft, setQuantumTimeLeft] = useState(TIMER_SECONDS);
+  const [quantumResolution, setQuantumResolution] = useState(null);
   const [winnerPath, setWinnerPath] = useState(null);
-  const [replayIndex, setReplayIndex] = useState(0);
-
-  const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
-  const [resolution, setResolution] = useState(null);
-  const [toast, setToast] = useState(null);
   const [conceptStats, setConceptStats] = useState(EMPTY_CONCEPT_STATS);
+
+  // Side-by-side comparison replay
+  const [comparisonClassicalIndex, setComparisonClassicalIndex] = useState(0);
+  const [comparisonQuantumIndex, setComparisonQuantumIndex] = useState(0);
+
+  const [toast, setToast] = useState(null);
 
   const lastMoveRef = useRef(0);
   const handlersRef = useRef({});
@@ -348,60 +486,148 @@ function MazeMission() {
     toastTimeoutRef.current = setTimeout(() => setToast(null), 6500);
   }
 
-  function finish(won, steps) {
-    const timeRemainingRatio = timeLeft / TIMER_SECONDS;
+  function resetClassical(nextMaze) {
+    setClassicalMaze(nextMaze);
+    setClassicalPos({ ...nextMaze.start });
+    setClassicalVisited(makeInitialVisited(nextMaze));
+    setClassicalHistory([{ ...nextMaze.start }]);
+    setClassicalStepCount(0);
+    setClassicalTimeLeft(TIMER_SECONDS);
+    setClassicalResolution(null);
+  }
+
+  function resetQuantum(nextMaze) {
+    setQuantumMaze(nextMaze);
+    setQuantumTokens(createTokens(nextMaze));
+    setQuantumVisited(makeInitialVisited(nextMaze));
+    setQuantumStepCount(0);
+    setQuantumTimeLeft(TIMER_SECONDS);
+    setQuantumResolution(null);
+    setWinnerPath(null);
+    setConceptStats(EMPTY_CONCEPT_STATS);
+    seenConceptsRef.current = new Set();
+    setToast(null);
+  }
+
+  // Both finish* helpers take the values a move just produced explicitly, rather than reading
+  // component state — the caller's own setState calls for that same move haven't flushed into a
+  // render yet, so the closed-over state variables would still read last render's values.
+  function finishClassical(won, { visited, history, steps, timeLeft }) {
     const coverageRatio = visited.size / TOTAL_CELLS;
-    setResolution({
+    const deadEndsEntered = new Set(
+      history.filter((p) => classicalMaze.cells[p.row][p.col].isDeadEnd).map((p) => cellKey(p.row, p.col))
+    ).size;
+    setClassicalResolution({
       won,
       steps,
       coverageRatio,
       coveragePercent: Math.round(coverageRatio * 100),
       cellsCovered: visited.size,
-      parSteps: maze.parSteps,
-      timeRemainingRatio,
-      conceptStats,
+      parSteps: classicalMaze.optimalSteps,
+      timeRemainingRatio: timeLeft / TIMER_SECONDS,
+      deadEndsEntered,
+      weights: CLASSICAL_SCORE_WEIGHTS,
     });
-    setPhase('resolved');
   }
 
-  function attemptMove(dirKey) {
-    if (phase !== 'walking') return;
+  function finishQuantum(won, { visited, steps, timeLeft, conceptStats: statsAtFinish }) {
+    const coverageRatio = visited.size / TOTAL_CELLS;
+    setQuantumResolution({
+      won,
+      steps,
+      coverageRatio,
+      coveragePercent: Math.round(coverageRatio * 100),
+      cellsCovered: visited.size,
+      parSteps: quantumMaze.parSteps,
+      timeRemainingRatio: timeLeft / TIMER_SECONDS,
+      conceptStats: statsAtFinish,
+    });
+  }
+
+  function attemptClassicalMove(dirKey) {
+    if (phase !== 'classical-walking') return;
     const now = performance.now();
     if (now - lastMoveRef.current < MOVE_COOLDOWN_MS) return;
 
-    const result = stepTokens(maze, tokens, dirKey);
+    const result = stepClassical(classicalMaze, classicalPos, dirKey);
     if (!result.moved) return;
     lastMoveRef.current = now;
 
-    setTokens(result.tokens);
-    setVisited((prev) => {
-      const next = new Set(prev);
-      result.newlyVisited.forEach((k) => next.add(k));
-      return next;
-    });
-    setStepCount((c) => c + 1);
+    const nextPos = { row: result.row, col: result.col };
+    const nextVisited = new Set(classicalVisited);
+    nextVisited.add(cellKey(nextPos.row, nextPos.col));
+    const nextHistory = [...classicalHistory, nextPos];
+    const nextStepCount = classicalStepCount + 1;
 
+    setClassicalPos(nextPos);
+    setClassicalVisited(nextVisited);
+    setClassicalHistory(nextHistory);
+    setClassicalStepCount(nextStepCount);
+
+    const won = nextPos.row === classicalMaze.exit.row && nextPos.col === classicalMaze.exit.col;
+    if (won) {
+      finishClassical(true, {
+        visited: nextVisited,
+        history: nextHistory,
+        steps: nextStepCount,
+        timeLeft: classicalTimeLeft,
+      });
+      setPhase('classical-resolved');
+    }
+  }
+
+  function attemptQuantumMove(dirKey) {
+    if (phase !== 'quantum-walking') return;
+    const now = performance.now();
+    if (now - lastMoveRef.current < MOVE_COOLDOWN_MS) return;
+
+    const result = stepTokens(quantumMaze, quantumTokens, dirKey);
+    if (!result.moved) return;
+    lastMoveRef.current = now;
+
+    const nextVisited = new Set(quantumVisited);
+    result.newlyVisited.forEach((k) => nextVisited.add(k));
+    const nextStepCount = quantumStepCount + 1;
+
+    setQuantumTokens(result.tokens);
+    setQuantumVisited(nextVisited);
+    setQuantumStepCount(nextStepCount);
+
+    let nextConceptStats = conceptStats;
     if (result.splits > 0) {
-      bumpStat('splits', result.splits);
+      nextConceptStats = { ...nextConceptStats, splits: nextConceptStats.splits + result.splits };
+      setConceptStats(nextConceptStats);
       announce('superposition');
     }
     if (result.locks > 0) {
-      bumpStat('locks', result.locks);
+      nextConceptStats = { ...nextConceptStats, locks: nextConceptStats.locks + result.locks };
+      setConceptStats(nextConceptStats);
       announce('decoherence');
       setCoreStage('unstable');
       setTimeout(() => setCoreStage((s) => (s === 'unstable' ? 'alive' : s)), 1400);
     }
 
     if (result.winner) {
-      setWinnerPath(result.winner.path);
       announce('measurement');
-      animate(corePulse, [0, 1], { duration: 1.1, ease: 'easeOut' });
-      setReplayIndex(0);
-      setPhase('replaying');
+      setWinnerPath(result.winner.path);
+      finishQuantum(true, {
+        visited: nextVisited,
+        steps: nextStepCount,
+        timeLeft: quantumTimeLeft,
+        conceptStats: nextConceptStats,
+      });
+      setComparisonClassicalIndex(0);
+      setComparisonQuantumIndex(0);
+      setPhase('comparison');
     }
   }
 
-  handlersRef.current = { attemptMove };
+  handlersRef.current = {
+    attemptMove: (dir) => {
+      if (phase === 'classical-walking') attemptClassicalMove(dir);
+      if (phase === 'quantum-walking') attemptQuantumMove(dir);
+    },
+  };
 
   useEffect(() => {
     function onKeyDown(e) {
@@ -415,31 +641,68 @@ function MazeMission() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  // Independent per-phase countdown timers.
   useEffect(() => {
-    if (!ACTIVE_PHASES.includes(phase)) return;
-    const id = setInterval(() => setTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
+    if (phase !== 'classical-walking') return;
+    const id = setInterval(() => setClassicalTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
     return () => clearInterval(id);
   }, [phase]);
 
   useEffect(() => {
-    if (ACTIVE_PHASES.includes(phase) && timeLeft <= 0) {
-      finish(false, stepCount);
-    }
-    // stepCount/visited/maze read at the instant time runs out, not tracked as triggers.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, timeLeft]);
+    if (phase !== 'quantum-walking') return;
+    const id = setInterval(() => setQuantumTimeLeft((t) => (t <= 1 ? 0 : t - 1)), 1000);
+    return () => clearInterval(id);
+  }, [phase]);
 
-  // Solo replay: once a branch reaches the exit, walk its recorded lineage one cell at a time.
   useEffect(() => {
-    if (phase !== 'replaying' || !winnerPath) return;
-    if (replayIndex >= winnerPath.length - 1) {
-      const timeout = setTimeout(() => finish(true, stepCount), 500);
-      return () => clearTimeout(timeout);
+    if (phase === 'classical-walking' && classicalTimeLeft <= 0) {
+      finishClassical(false, {
+        visited: classicalVisited,
+        history: classicalHistory,
+        steps: classicalStepCount,
+        timeLeft: 0,
+      });
+      setPhase('classical-resolved');
     }
-    const timeout = setTimeout(() => setReplayIndex((i) => i + 1), REPLAY_STEP_MS);
-    return () => clearTimeout(timeout);
+    // Read state as of the instant time runs out, not tracked as triggers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, winnerPath, replayIndex]);
+  }, [phase, classicalTimeLeft]);
+
+  useEffect(() => {
+    if (phase === 'quantum-walking' && quantumTimeLeft <= 0) {
+      finishQuantum(false, { visited: quantumVisited, steps: quantumStepCount, timeLeft: 0, conceptStats });
+      setPhase('resolved');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, quantumTimeLeft]);
+
+  // Comparison replay: quantum side keeps today's original pace; classical side (usually a much
+  // longer history, since every dead end costs a there-and-back) speeds up proportionally so it
+  // doesn't leave the quantum panel sitting idle at the exit for a long stretch once it's done.
+  useEffect(() => {
+    if (phase !== 'comparison' || !winnerPath) return;
+    if (comparisonQuantumIndex >= winnerPath.length - 1) return;
+    const timeout = setTimeout(() => setComparisonQuantumIndex((i) => i + 1), REPLAY_STEP_MS);
+    return () => clearTimeout(timeout);
+  }, [phase, winnerPath, comparisonQuantumIndex]);
+
+  useEffect(() => {
+    if (phase !== 'comparison' || classicalHistory.length === 0) return;
+    if (comparisonClassicalIndex >= classicalHistory.length - 1) return;
+    const speedup = winnerPath ? winnerPath.length / classicalHistory.length : 1;
+    const tickMs = Math.max(60, REPLAY_STEP_MS * speedup);
+    const timeout = setTimeout(() => setComparisonClassicalIndex((i) => i + 1), tickMs);
+    return () => clearTimeout(timeout);
+  }, [phase, classicalHistory, comparisonClassicalIndex, winnerPath]);
+
+  useEffect(() => {
+    if (phase !== 'comparison' || !winnerPath) return;
+    const classicalDone = comparisonClassicalIndex >= classicalHistory.length - 1;
+    const quantumDone = comparisonQuantumIndex >= winnerPath.length - 1;
+    if (!classicalDone || !quantumDone) return;
+    const timeout = setTimeout(() => setPhase('resolved'), 700);
+    return () => clearTimeout(timeout);
+  }, [phase, comparisonClassicalIndex, comparisonQuantumIndex, winnerPath, classicalHistory]);
 
   // Coarse mission-long arc: dim during the intro, climbing with maze coverage through the walk,
   // a further lift once a branch is found and replaying, landing on the final efficiency grade.
@@ -459,64 +722,43 @@ function MazeMission() {
   }, [phase, visited, resolution]);
 
   function handleIntroComplete() {
-    setTimeout(() => setPhase('walking'), 600);
+    setTimeout(() => setPhase('classical-walking'), 600);
+  }
+
+  function handleQuantumIntroComplete() {
+    setTimeout(() => setPhase('quantum-walking'), 600);
+  }
+
+  function handleContinueToQuantum() {
+    resetQuantum(makeInitialMaze());
+    setPhase('quantum-intro');
   }
 
   function replay() {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-
-    const nextMaze = makeInitialMaze();
-    setMaze(nextMaze);
-    setTokens(createTokens(nextMaze));
-    setVisited(makeInitialVisited(nextMaze));
-    setStepCount(0);
-    setWinnerPath(null);
-    setReplayIndex(0);
-    setTimeLeft(TIMER_SECONDS);
-    setResolution(null);
-    setToast(null);
-    setConceptStats(EMPTY_CONCEPT_STATS);
-    seenConceptsRef.current = new Set();
-    setPhase('walking');
+    resetClassical(makeInitialMaze());
+    resetQuantum(makeInitialMaze());
+    setComparisonClassicalIndex(0);
+    setComparisonQuantumIndex(0);
+    setPhase('classical-walking');
   }
 
-  const activeBranches = useMemo(() => tokens.filter((t) => !t.locked).length, [tokens]);
-  const coveragePercent = useMemo(() => Math.round((visited.size / TOTAL_CELLS) * 100), [visited]);
-  const replayPos = phase === 'replaying' && winnerPath ? winnerPath[Math.min(replayIndex, winnerPath.length - 1)] : null;
+  const quantumActiveBranches = useMemo(() => quantumTokens.filter((t) => !t.locked).length, [quantumTokens]);
+  const classicalCoveragePercent = useMemo(
+    () => Math.round((classicalVisited.size / TOTAL_CELLS) * 100),
+    [classicalVisited]
+  );
+  const quantumCoveragePercent = useMemo(
+    () => Math.round((quantumVisited.size / TOTAL_CELLS) * 100),
+    [quantumVisited]
+  );
 
-  function renderMazeGrid() {
-    return (
-      <div
-        className="grid overflow-hidden rounded-2xl bg-slate-950 ring-1 ring-slate-800"
-        style={{
-          gridTemplateColumns: `repeat(${maze.size}, minmax(0, 1fr))`,
-          width: 'min(92vw, 520px)',
-          gap: '1px',
-        }}
-      >
-        {maze.cells.flat().map((cell) => {
-          const key = cellKey(cell.row, cell.col);
-          const isExit = maze.exit.row === cell.row && maze.exit.col === cell.col;
-          const isReplayMarker = !!replayPos && replayPos.row === cell.row && replayPos.col === cell.col;
-          const isRevealed = visited.has(key) || isReplayMarker;
-          const cellTokens = tokens.filter(
-            (t) => t.row === cell.row && t.col === cell.col && (phase === 'walking' || t.locked)
-          );
-
-          return (
-            <Cell
-              key={key}
-              cell={cell}
-              isExit={isExit}
-              isRevealed={isRevealed}
-              tokensHere={cellTokens}
-              isReplayMarker={isReplayMarker}
-            />
-          );
-        })}
-      </div>
-    );
-  }
+  const classicalReplayPos =
+    phase === 'comparison' && classicalHistory.length > 0
+      ? classicalHistory[Math.min(comparisonClassicalIndex, classicalHistory.length - 1)]
+      : null;
+  const quantumReplayPos =
+    phase === 'comparison' && winnerPath ? winnerPath[Math.min(comparisonQuantumIndex, winnerPath.length - 1)] : null;
 
   return (
     <main className="min-h-screen bg-transparent">
@@ -556,9 +798,60 @@ function MazeMission() {
               lineClassName="font-mono text-sm text-cyan-300 sm:text-base"
             />
           </motion.div>
-        ) : phase === 'walking' ? (
+        ) : phase === 'classical-walking' ? (
           <motion.div
-            key="walking"
+            key="classical-walking"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mx-auto max-w-4xl px-6 py-10"
+          >
+            <StatCards
+              timeLeft={classicalTimeLeft}
+              stepCount={classicalStepCount}
+              coveragePercent={classicalCoveragePercent}
+            />
+
+            <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:justify-center">
+              {renderGrid({
+                maze: classicalMaze,
+                visited: classicalVisited,
+                tokens: [{ id: 'player', row: classicalPos.row, col: classicalPos.col, locked: false }],
+              })}
+
+              <div className="flex flex-col items-center gap-4">
+                <DirectionPad onMove={attemptClassicalMove} disabled={phase !== 'classical-walking'} />
+
+                <p className="max-w-[220px] text-center text-xs text-slate-500">
+                  Arrow keys / WASD. No shortcuts here — hit a dead end, back out yourself.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        ) : phase === 'classical-resolved' ? (
+          <motion.div key="classical-resolved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+            <ClassicalResolutionScreen resolution={classicalResolution} onContinue={handleContinueToQuantum} />
+          </motion.div>
+        ) : phase === 'quantum-intro' ? (
+          <motion.div
+            key="quantum-intro"
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.5 }}
+            className="flex min-h-[70vh] flex-col items-center justify-center px-6 py-10"
+          >
+            <SequentialLines
+              lines={QUANTUM_INTRO_LINES}
+              showCursor
+              stagger={1.1}
+              onComplete={handleQuantumIntroComplete}
+              className="space-y-3 text-center"
+              lineClassName="font-mono text-sm text-cyan-300 sm:text-base"
+            />
+          </motion.div>
+        ) : phase === 'quantum-walking' ? (
+          <motion.div
+            key="quantum-walking"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -567,34 +860,18 @@ function MazeMission() {
           >
             <ConceptToast toast={toast} />
 
-            <div className="mb-8 flex flex-col gap-4 border-y border-white/[0.06] py-4 sm:flex-row sm:items-center sm:justify-center sm:gap-10">
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Time Remaining</p>
-                <p className="mt-1 text-lg font-semibold text-white">{timeLeft}s</p>
-                <div className="mx-auto mt-2 w-32">
-                  <ProgressBar
-                    value={(timeLeft / TIMER_SECONDS) * 100}
-                    gradient={timeLeft <= TIMER_SECONDS * 0.25 ? 'from-red-600 to-red-400' : 'from-amber-500 to-amber-300'}
-                    duration={0.4}
-                  />
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Steps Taken</p>
-                <p className="mt-1 text-lg font-semibold text-cyan-200">{stepCount}</p>
-                <p className="mt-1 text-[11px] text-slate-500">Active branches: {activeBranches}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Maze Coverage</p>
-                <p className="mt-1 text-lg font-semibold text-purple-200">{coveragePercent}%</p>
-              </div>
-            </div>
+            <StatCards
+              timeLeft={quantumTimeLeft}
+              stepCount={quantumStepCount}
+              coveragePercent={quantumCoveragePercent}
+              stepsExtra={`Active branches: ${quantumActiveBranches}`}
+            />
 
             <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:justify-center">
-              {renderMazeGrid()}
+              {renderGrid({ maze: quantumMaze, visited: quantumVisited, tokens: quantumTokens })}
 
               <div className="flex flex-col items-center gap-4">
-                <DirectionPad onMove={attemptMove} disabled={phase !== 'walking'} onHoverChange={setHoveredActionable} />
+                <DirectionPad onMove={attemptQuantumMove} disabled={phase !== 'quantum-walking'} />
 
                 <p className="max-w-[220px] text-center text-xs text-slate-500">
                   Arrow keys / WASD — every direction press moves every branch committed to that direction at once.
@@ -605,23 +882,37 @@ function MazeMission() {
 
             <ConceptLegend />
           </motion.div>
-        ) : phase === 'replaying' ? (
+        ) : phase === 'comparison' ? (
           <motion.div
-            key="replaying"
+            key="comparison"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
-            className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-6 py-10"
+            className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-6 py-10"
           >
-            <p className="font-mono text-sm text-cyan-300">
-              &gt; Measurement made — replaying the winning branch's path start to finish...
+            <p className="text-center font-mono text-sm text-cyan-300">
+              &gt; Two runs, same shape of problem — your solo search on the left, the quantum measurement on the
+              right.
             </p>
-            {renderMazeGrid()}
+            <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-xs uppercase tracking-widest text-slate-500">Solo Search</p>
+                {renderGrid({ maze: classicalMaze, visited: classicalVisited, markerPos: classicalReplayPos })}
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-xs uppercase tracking-widest text-slate-500">Quantum Search</p>
+                {renderGrid({ maze: quantumMaze, visited: quantumVisited, markerPos: quantumReplayPos })}
+              </div>
+            </div>
           </motion.div>
         ) : (
           <motion.div key="resolved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-            <ResolutionScreen resolution={resolution} onReplay={replay} />
+            <FinalResolutionScreen
+              classicalResolution={classicalResolution}
+              quantumResolution={quantumResolution}
+              onReplay={replay}
+            />
           </motion.div>
         )}
       </AnimatePresence>
