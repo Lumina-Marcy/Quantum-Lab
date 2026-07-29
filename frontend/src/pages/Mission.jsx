@@ -16,7 +16,7 @@ import SensitivityMeter from '../components/SensitivityMeter';
 import MissionPreviewCard from '../components/MissionPreviewCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import QuantumCore from '../components/QuantumCore';
-import { MISSIONS } from '../data/missions';
+import { fetchMissionById } from '../data/missionsApi';
 import { generateFictionalSsn } from '../utils/ssn';
 
 const EMPTY_FORM = {
@@ -510,13 +510,31 @@ const PLAYABLE_ROUTES = { 1: '/mission/1/play', 2: '/mission/2/play', 3: '/missi
 function Mission() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const mission = MISSIONS.find((m) => m.id === id) || MISSIONS[0];
   const isPasswordMission = id === '3';
   const playRoute = PLAYABLE_ROUTES[id];
-  const isAvailable = mission.status === 'available';
 
+  const [mission, setMission] = useState(null);
+  const [missionError, setMissionError] = useState(false);
   const [profile, setProfile] = useState(null);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMission(null);
+    setMissionError(false);
+    fetchMissionById(id)
+      .then((data) => {
+        if (cancelled) return;
+        if (data) setMission(data);
+        else setMissionError(true);
+      })
+      .catch(() => {
+        if (!cancelled) setMissionError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   function handleStart() {
     if (!playRoute) return;
@@ -538,6 +556,20 @@ function Mission() {
       </main>
     );
   }
+
+  if (missionError) {
+    return (
+      <main className="mx-auto max-w-4xl px-6 py-16 text-center text-slate-400">
+        Couldn't load this mission. Is the backend running?
+      </main>
+    );
+  }
+
+  if (!mission) {
+    return <main className="mx-auto max-w-4xl px-6 py-16 text-center text-slate-400">Loading…</main>;
+  }
+
+  const isAvailable = mission.status === 'available';
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-16 space-y-10">

@@ -25,14 +25,27 @@ CREATE TABLE IF NOT EXISTS users (
 -- ──────────────────────────────────────────────
 -- 2. missions
 -- ──────────────────────────────────────────────
+-- estimated_time is a display label ("~1 min", "5–7 min"), not a raw integer — the Mission Hub
+-- shows a range/approximation, not a precise duration. status/terminal_lines are presentation
+-- metadata the frontend needs (card availability, the hover-reveal flavor text); terminal_lines is
+-- JSONB (an array of strings) following the same "structured content in the DB" pattern as
+-- lessons.links, since it's a variable-length list, not a scalar column.
 CREATE TABLE IF NOT EXISTS missions (
     mission_id     SERIAL PRIMARY KEY,
     title          VARCHAR NOT NULL,
     description    TEXT    NOT NULL,
     difficulty     VARCHAR NOT NULL,
-    estimated_time INTEGER NOT NULL,
+    estimated_time VARCHAR NOT NULL,
+    status         VARCHAR NOT NULL DEFAULT 'coming-soon',
+    terminal_lines JSONB   NOT NULL DEFAULT '[]'::jsonb,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Migration: run this if the table already exists (it does, with the old integer-minutes shape —
+-- safe to run since the table has no rows yet).
+-- ALTER TABLE missions ALTER COLUMN estimated_time TYPE VARCHAR USING estimated_time::VARCHAR;
+-- ALTER TABLE missions ADD COLUMN IF NOT EXISTS status VARCHAR NOT NULL DEFAULT 'coming-soon';
+-- ALTER TABLE missions ADD COLUMN IF NOT EXISTS terminal_lines JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- ──────────────────────────────────────────────
 -- 3. mission_steps

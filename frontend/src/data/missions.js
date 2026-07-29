@@ -1,53 +1,5 @@
-// Single source of truth for mission metadata — shared by the Landing page,
-// Mission Hub, and the per-mission onboarding page.
-export const MISSIONS = [
-  {
-    id: '1',
-    title: 'Lost Medical Breakthrough',
-    summary: 'Somewhere in millions of molecular combinations is a cure. Find it before time runs out.',
-    estimatedTime: '~1 min',
-    difficulty: 'Beginner',
-    status: 'available',
-    terminalLines: ['Searching Molecular Structures...'],
-  },
-  {
-    id: '2',
-    title: 'Maze Search',
-    summary: "Trapped with no map. Every junction splits your qubit into every path forward at once — cover as much ground as you can before one branch finds the exit.",
-    estimatedTime: '5–7 min',
-    difficulty: 'Beginner',
-    status: 'available',
-    terminalLines: ['Search Space: 1,000,000 Paths', 'Quantum Advantage: Expected'],
-  },
-  {
-    id: '3',
-    title: 'Password Vault',
-    summary: "A quantum computer is trying to break into your vault. Can today's encryption survive tomorrow's technology?",
-    estimatedTime: '5 min',
-    difficulty: 'Intermediate',
-    status: 'available',
-    terminalLines: ['Initializing...', 'Encryption Detected...', 'Threat Level: HIGH'],
-  },
-  {
-    id: '4',
-    title: 'The Supply Chain Crisis',
-    summary: 'A global supply chain is collapsing under its own complexity. Reroute it before the crisis spreads.',
-    estimatedTime: '~2 min',
-    difficulty: 'Intermediate',
-    status: 'available',
-    terminalLines: ['Optimization Ready'],
-  },
-  {
-    id: '5',
-    title: 'Government Files',
-    summary: 'Classified files are under attack from a quantum-powered intrusion. Defend what has to stay secret.',
-    estimatedTime: '5–6 min',
-    difficulty: 'Advanced',
-    status: 'available',
-    terminalLines: ['Encryption Audit Pending...'],
-  },
-];
-
+// Mission metadata itself now lives in the `missions` DB table (fetched via missionsApi.js) — this
+// file is just the small UI label lookup that isn't part of that data.
 export const STATUS_LABELS = {
   available: 'Available',
   'coming-soon': 'Coming Soon',

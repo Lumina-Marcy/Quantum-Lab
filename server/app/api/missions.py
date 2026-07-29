@@ -1,56 +1,53 @@
-from typing import List
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.db.models import Mission
+from app.db.session import get_db
 
 router = APIRouter()
 
-class Mission(BaseModel):
-    id: int
+
+class MissionResponse(BaseModel):
+    mission_id: str = Field(alias="id")
     title: str
-    description: str
+    description: str = Field(alias="summary")
     difficulty: str
-    story: str | None = None
+    estimated_time: str = Field(alias="estimatedTime")
+    status: str
+    terminal_lines: list[str] = Field(default_factory=list, alias="terminalLines")
 
-missions = [
-    Mission(
-        id=1,
-        title="Password Vault",
-        description="Learn encryption and quantum threats.",
-        difficulty="beginner",
-        story="A system is under attack by a code-breaking adversary.",
-    ),
-    Mission(
-        id=2,
-        title="Find the Exit",
-        description="Compare classical and quantum search behavior.",
-        difficulty="beginner",
-        story="Navigate a maze while observing search strategies side by side.",
-    ),
-    Mission(
-        id=3,
-        title="Lost Medical Breakthrough",
-        description="Search massive spaces for a critical solution.",
-        difficulty="intermediate",
-        story="Find a medical compound among millions of possibilities.",
-    ),
-    Mission(
-        id=4,
-        title="The Supply Chain Crisis",
-        description="Optimize delivery routes in a complex logistics network.",
-        difficulty="intermediate",
-        story="Help shipments reach their destination faster with smarter decisions.",
-    ),
-]
+    # `mission_id` is an integer PK in the DB, but the frontend routes/compares on it as a string
+    # ("/mission/3", `useParams().id`) — Pydantic's lax mode does NOT coerce int -> str on its own
+    # (verified: it raises `string_type` without this), so it needs an explicit conversion.
+    @field_validator("mission_id", mode="before")
+    @classmethod
+    def stringify_id(cls, value):
+        return str(value)
 
-@router.get("", response_model=List[Mission])
-def get_missions(difficulty: str | None = None):
-    if difficulty:
-        return [mission for mission in missions if mission.difficulty == difficulty]
-    return missions
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
-@router.get("/{mission_id}", response_model=Mission)
-def get_mission(mission_id: int):
-    for mission in missions:
-        if mission.id == mission_id:
-            return mission
-    raise HTTPException(status_code=404, detail="Mission not found")
+
+@router.get("", response_model=list[MissionResponse])
+def get_missions(difficulty: Optional[str] = None, db: Session = Depends(get_db)):
+    try:
+        query = db.query(Mission)
+        if difficulty:
+            query = query.filter(Mission.difficulty == difficulty)
+        return query.order_by(Mission.mission_id).all()
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
+
+
+@router.get("/{mission_id}", response_model=MissionResponse)
+def get_mission(mission_id: int, db: Session = Depends(get_db)):
+    try:
+        mission = db.query(Mission).filter(Mission.mission_id == mission_id).first()
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="A server error occurred. Please try again later.")
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return mission

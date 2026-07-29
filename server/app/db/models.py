@@ -25,7 +25,9 @@ class Mission(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     difficulty = Column(String, nullable=False)
-    estimated_time = Column(Integer, nullable=False)
+    estimated_time = Column(String, nullable=False)
+    status = Column(String, nullable=False, server_default='coming-soon')
+    terminal_lines = Column(JSONB, nullable=False, server_default='[]')
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 class MissionStep(Base):
