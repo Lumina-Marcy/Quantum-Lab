@@ -12,6 +12,7 @@ import Mission from './pages/Mission';
 import PasswordMission from './pages/PasswordMission';
 import MoleculeMission from './pages/MoleculeMission';
 import SupplyChainMission from './pages/SupplyChainMission';
+import GovernmentFilesMission from './pages/GovernmentFilesMission';
 import LearnWhy from './pages/LearnWhy';
 import VisualizeMore from './pages/VisualizeMore';
 import MazeMission from './pages/MazeMission';

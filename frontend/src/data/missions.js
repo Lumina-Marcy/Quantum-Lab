@@ -43,7 +43,7 @@ export const MISSIONS = [
     summary: 'Classified files are under attack from a quantum-powered intrusion. Defend what has to stay secret.',
     estimatedTime: '5–6 min',
     difficulty: 'Advanced',
-    status: 'coming-soon',
+    status: 'available',
     terminalLines: ['Encryption Audit Pending...'],
   },
 ];
