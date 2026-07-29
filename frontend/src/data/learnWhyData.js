@@ -20,25 +20,54 @@ export const KEY_TAKEAWAY_POINTS = [
 export const GROVER_NOTE =
   "Visualization inspired by Grover's Algorithm. Actual quantum attacks require additional practical considerations.";
 
-// Fallbacks only — used if someone reaches this screen without having filled in the
-// onboarding vault fields (e.g. an old/partial session), so the cascade is never blank.
-export const FICTIONAL_BREACH_EXTRAS = {
-  fullName: 'Jordan Sample',
-  bankValue: 'Sample Bank — Account •••• 8823 (sample data — not a real account)',
-  addressValue: '742 Evergreen Terrace (sample data)',
-};
+// Builds the breach-reveal list from exactly what the player entered/selected during vault
+// setup — nothing is invented. A field or service group that was left blank simply never
+// produces an item, so the reveal only ever shows what actually belongs to this player's vault.
+export function buildBreachItems(vault) {
+  if (!vault) return [];
+  const items = [{ id: 'password', actionLabel: 'Verifying credentials...', resultLabel: 'Password Compromised' }];
 
-export function buildBreachItems({ email, fullName, address, bankName, accountNumber, extras = FICTIONAL_BREACH_EXTRAS }) {
-  const bankValue =
-    bankName && accountNumber
-      ? `${bankName} — Account ${'•'.repeat(Math.max(0, accountNumber.length - 4))}${accountNumber.slice(-4)}`
-      : extras.bankValue;
+  if (vault.fullName) {
+    items.push({ id: 'identity', actionLabel: 'Accessing account...', resultLabel: 'Identity Confirmed', value: vault.fullName });
+  }
+  if (vault.email) {
+    items.push({ id: 'email', actionLabel: 'Retrieving contact info...', resultLabel: 'Email Retrieved', value: vault.email });
+  }
+  if (vault.phone) {
+    items.push({ id: 'phone', actionLabel: 'Retrieving phone number...', resultLabel: 'Phone Number Retrieved', value: vault.phone });
+  }
+  if (vault.ssn) {
+    items.push({ id: 'ssn', actionLabel: 'Searching identity records...', resultLabel: 'SSN Exposed', value: vault.ssn });
+  }
+  if (vault.address) {
+    items.push({ id: 'address', actionLabel: 'Locating home address...', resultLabel: 'Home Address Retrieved', value: vault.address });
+  }
+  if (vault.bankName && vault.accountNumber) {
+    const masked = `${vault.bankName} — Account ${'•'.repeat(Math.max(0, vault.accountNumber.length - 4))}${vault.accountNumber.slice(-4)}`;
+    items.push({ id: 'bank', actionLabel: 'Searching stored payment methods...', resultLabel: 'Bank Account Retrieved', value: masked });
+  }
+  if (vault.cardNickname) {
+    items.push({ id: 'card', actionLabel: 'Scanning stored cards...', resultLabel: 'Credit Card Retrieved', value: vault.cardNickname });
+  }
+  if (vault.investmentAccount) {
+    items.push({ id: 'investment', actionLabel: 'Searching investment platforms...', resultLabel: 'Investment Account Retrieved', value: vault.investmentAccount });
+  }
+  const medicalDetails = [vault.doctorName, vault.primaryHospital, vault.insuranceProvider, vault.medicalPortal].filter(Boolean);
+  if (medicalDetails.length > 0) {
+    items.push({ id: 'medical', actionLabel: 'Accessing medical portal...', resultLabel: 'Medical Records Retrieved', value: medicalDetails.join(' · ') });
+  }
+  if (vault.streaming?.length > 0) {
+    items.push({ id: 'streaming', actionLabel: 'Checking connected services...', resultLabel: 'Streaming Accounts Found', value: vault.streaming.join(', ') });
+  }
+  if (vault.social?.length > 0) {
+    items.push({ id: 'social', actionLabel: 'Checking social accounts...', resultLabel: 'Social Accounts Found', value: vault.social.join(', ') });
+  }
+  if (vault.gaming?.length > 0) {
+    items.push({ id: 'gaming', actionLabel: 'Checking gaming platforms...', resultLabel: 'Gaming Accounts Found', value: vault.gaming.join(', ') });
+  }
+  if (vault.work?.length > 0) {
+    items.push({ id: 'work', actionLabel: 'Checking work accounts...', resultLabel: 'Work Accounts Found', value: vault.work.join(', ') });
+  }
 
-  return [
-    { id: 'password', actionLabel: 'Verifying credentials...', resultLabel: 'Password Compromised' },
-    { id: 'identity', actionLabel: 'Accessing account...', resultLabel: 'Identity Confirmed', value: fullName || extras.fullName },
-    { id: 'email', actionLabel: 'Retrieving contact info...', resultLabel: 'Email Retrieved', value: email },
-    { id: 'bank', actionLabel: 'Searching stored payment methods...', resultLabel: 'Bank Account Retrieved', value: bankValue },
-    { id: 'address', actionLabel: 'Locating home address...', resultLabel: 'Home Address Retrieved', value: address || extras.addressValue },
-  ];
+  return items;
 }

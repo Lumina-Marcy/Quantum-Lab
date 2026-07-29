@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import Panel from '../Panel';
+import QuantumDefinition from '../QuantumDefinition';
 
 const MIN_N = 2;
 const MAX_N = 16;
@@ -153,14 +155,14 @@ function GroversAlgorithm() {
 
   return (
     <div className="space-y-6">
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+      <p className="mx-auto max-w-xl text-center text-sm text-slate-400">
         Grover's algorithm searches an unsorted list faster than a classical computer by repeating two
-        moves — <span className="text-cyan-300">Oracle</span> and{' '}
-        <span className="text-cyan-300">Diffusion</span> — enough times to swing the probability of the
+        moves — <QuantumDefinition term="oracle">Oracle</QuantumDefinition> and{' '}
+        <QuantumDefinition term="diffusion">Diffusion</QuantumDefinition> — enough times to swing the probability of the
         number you want toward 100%. Set up a list below, then step through each move one at a time.
       </p>
 
-      <form onSubmit={handleSetup} className="flex flex-wrap items-end gap-4">
+      <form onSubmit={handleSetup} className="flex flex-wrap items-end justify-center gap-4">
         <div>
           <label className="block text-sm text-slate-400 mb-1">How many numbers in the list?</label>
           <input
@@ -197,7 +199,7 @@ function GroversAlgorithm() {
         </p>
       )}
 
-      <div className="flex h-48 items-end justify-center gap-1.5 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+      <Panel className="flex h-48 items-end justify-center gap-1.5 p-4">
         {amplitudes.map((a, i) => {
           const isTarget = i === targetIndex;
           const prob = a ** 2;
@@ -240,7 +242,7 @@ function GroversAlgorithm() {
             </div>
           );
         })}
-      </div>
+      </Panel>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -270,15 +272,15 @@ function GroversAlgorithm() {
       </div>
 
       {atOptimal && (
-        <div className="rounded-2xl border border-emerald-500/50 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-          🎯 You've reached the optimal number of iterations for a list of {n}. The probability of
+        <p className="mx-auto max-w-xl border-l-2 border-emerald-400/50 py-1 pl-4 text-left text-sm text-emerald-300">
+          You've reached the optimal number of iterations for a list of {n}. The probability of
           measuring {target} is about as high as Grover's algorithm can get it here — this is where you'd
           stop and measure. Keep clicking if you're curious what happens next: since Grover's is periodic,
           more iterations will make the probability fall back down before it rises again.
-        </div>
+        </p>
       )}
 
-      <p className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4 text-sm leading-relaxed text-slate-300">
+      <p className="mx-auto max-w-xl border-t border-white/[0.06] pt-4 text-center text-sm leading-relaxed text-slate-400">
         {message}
       </p>
     </div>

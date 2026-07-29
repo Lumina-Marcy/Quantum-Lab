@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { animate } from 'framer-motion';
+import Panel from '../Panel';
+import QuantumDefinition from '../QuantumDefinition';
 
 const TILT = (25 * Math.PI) / 180;
 const SIZE = 260;
@@ -128,18 +130,19 @@ function QuantumGates() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm leading-relaxed text-slate-300">
+      <div className="mx-auto max-w-xl text-center text-sm leading-relaxed text-slate-400">
         <p>
-          A <span className="font-semibold text-cyan-300">single-qubit gate</span> is an operation that acts on
+          A <QuantumDefinition term="singleQubitGate">single-qubit gate</QuantumDefinition> is an operation that acts on
           exactly one qubit — it takes whatever state <span className="font-mono">|ψ⟩</span> that qubit is in and
           rotates it to a new state. Every possible state of one qubit lives somewhere on the surface of the{' '}
-          <span className="text-cyan-300">Bloch sphere</span> below, so a single-qubit gate is, quite literally,
+          <QuantumDefinition term="blochSphere">Bloch sphere</QuantumDefinition> below, so a single-qubit gate is, quite literally,
           nothing more than spinning that sphere's arrow to a new position.
         </p>
         <p className="mt-2">
           That's also what makes it "single-qubit": it only ever touches one qubit's own arrow. A{' '}
           <span className="text-slate-200">multi-qubit gate</span> (like CNOT) reaches across two or more qubits
-          at once and can link them together — <span className="text-slate-200">entanglement</span> — which no
+          at once and can link them together —{' '}
+          <QuantumDefinition term="entanglement">entanglement</QuantumDefinition> — which no
           amount of single-qubit gates, however many you chain, can ever produce on their own.
         </p>
       </div>
@@ -171,7 +174,7 @@ function QuantumGates() {
       {/* Circuit diagram: |ψ⟩ on the wire, one box per gate applied so far, and the resulting
           output state — the same "wire in, gate box, wire out" notation the lesson video uses,
           just extended to a chain of boxes instead of always exactly one. */}
-      <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+      <Panel className="p-4">
         <div className="flex items-center gap-1 overflow-x-auto">
           <span className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 font-mono text-sm text-slate-300">|ψ⟩</span>
           <div className="h-px w-4 shrink-0 bg-slate-600" />
@@ -198,7 +201,7 @@ function QuantumGates() {
             </span>
           )}
         </div>
-      </div>
+      </Panel>
 
       <div className="flex flex-col items-center gap-4">
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE}>

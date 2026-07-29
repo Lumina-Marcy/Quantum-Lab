@@ -1,3 +1,5 @@
+import { Building2, IdCard, Stethoscope, MessageSquare, ShoppingCart, Mail, Bitcoin, Cloud, Briefcase, Tv, KeyRound, ShieldCheck, Fingerprint } from 'lucide-react';
+
 // Data model for the post-breach triage loop (Password Mission, phase 2+).
 // The master password is already cracked (see PasswordMission.jsx's breach cinematic).
 // This is turn-based, not real-time: probabilities only move when the player deploys
@@ -38,7 +40,7 @@ export const ACCOUNTS = [
   {
     id: 'bank',
     label: 'Bank Account',
-    icon: '🏦',
+    icon: Building2,
     value: 'high',
     reversible: true,
     startProbability: 18,
@@ -52,7 +54,7 @@ export const ACCOUNTS = [
   {
     id: 'identity',
     label: 'SSN / Identity',
-    icon: '🪪',
+    icon: IdCard,
     value: 'high',
     reversible: false,
     startProbability: 5,
@@ -65,7 +67,7 @@ export const ACCOUNTS = [
   {
     id: 'medical',
     label: 'Medical Records',
-    icon: '🩺',
+    icon: Stethoscope,
     value: 'medium-high',
     reversible: false,
     startProbability: 10,
@@ -78,7 +80,7 @@ export const ACCOUNTS = [
   {
     id: 'social',
     label: 'Social Login',
-    icon: '💬',
+    icon: MessageSquare,
     value: 'medium',
     reversible: true,
     startProbability: 9,
@@ -91,7 +93,7 @@ export const ACCOUNTS = [
   {
     id: 'shop',
     label: 'Shopping Account',
-    icon: '🛒',
+    icon: ShoppingCart,
     value: 'low',
     reversible: true,
     startProbability: 20,
@@ -105,7 +107,7 @@ export const ACCOUNTS = [
   {
     id: 'email',
     label: 'Email Account',
-    icon: '📧',
+    icon: Mail,
     value: 'high',
     reversible: true,
     startProbability: 14,
@@ -118,7 +120,7 @@ export const ACCOUNTS = [
   {
     id: 'crypto',
     label: 'Crypto Wallet',
-    icon: '🪙',
+    icon: Bitcoin,
     value: 'high',
     reversible: false,
     startProbability: 9,
@@ -131,7 +133,7 @@ export const ACCOUNTS = [
   {
     id: 'cloud',
     label: 'Cloud Photo Backup',
-    icon: '☁️',
+    icon: Cloud,
     value: 'medium-high',
     reversible: false,
     startProbability: 13,
@@ -144,7 +146,7 @@ export const ACCOUNTS = [
   {
     id: 'work',
     label: 'Work Account',
-    icon: '💼',
+    icon: Briefcase,
     value: 'medium-high',
     reversible: true,
     startProbability: 11,
@@ -157,7 +159,7 @@ export const ACCOUNTS = [
   {
     id: 'streaming',
     label: 'Streaming Account',
-    icon: '📺',
+    icon: Tv,
     value: 'low',
     reversible: true,
     startProbability: 21,
@@ -169,10 +171,28 @@ export const ACCOUNTS = [
   },
 ];
 
+// Makes the breach personal: swaps in the real service the player said they use for 4 of the
+// 10 slots (social/work/streaming/gaming→shop), so "Spotify" shows up if they picked Spotify and
+// never appears if they didn't. Every other field — climbRate, value tier, reversible, cascades,
+// scoring weight — stays exactly the same regardless of label; only the display name changes.
+export function personalizeAccounts(baseAccounts, vault) {
+  if (!vault) return baseAccounts;
+  const overrides = {
+    social: vault.social?.[0],
+    work: vault.work?.[0],
+    streaming: vault.streaming?.[0],
+    shop: vault.gaming?.[0],
+  };
+  return baseAccounts.map((account) => {
+    const label = overrides[account.id];
+    return label ? { ...account, label } : account;
+  });
+}
+
 export const DEFENSES = {
   manager: {
     id: 'manager',
-    icon: '🗝️',
+    icon: KeyRound,
     title: 'Password Manager',
     tagline: 'Vaults multiple accounts behind one long master key.',
     mode: 'vault',
@@ -184,7 +204,7 @@ export const DEFENSES = {
   },
   twofa: {
     id: 'twofa',
-    icon: '🔐',
+    icon: ShieldCheck,
     title: '2FA',
     tagline: 'Simple, instant, protects one account.',
     mode: 'single',
@@ -196,7 +216,7 @@ export const DEFENSES = {
   },
   biometric: {
     id: 'biometric',
-    icon: '👆',
+    icon: Fingerprint,
     title: 'Biometric',
     tagline: 'Instant and strong — but unforgiving if spoofed.',
     mode: 'single',

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { animate, motion } from 'framer-motion';
 
-const SIZE = 140;
 const STROKE = 10;
-const RADIUS = (SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /** Circular gauge that animates its fill and label whenever `value` changes. */
-function ProbabilityGauge({ value = 0, label = 'Probability of Correct Answer' }) {
+function ProbabilityGauge({ value = 0, label = 'Probability of Correct Answer', size: SIZE = 140 }) {
+  const RADIUS = (SIZE - STROKE) / 2;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
   const [display, setDisplay] = useState(value);
 
   useEffect(() => {

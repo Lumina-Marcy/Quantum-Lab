@@ -31,21 +31,13 @@ function LearnWhy() {
   const [breached, setBreached] = useState(false);
   const [classicalTime] = useState(randomClassicalDuration);
   const [quantumTime] = useState(randomQuantumDuration);
-  const [breachItems] = useState(() =>
-    buildBreachItems({
-      email,
-      fullName: vault?.fullName,
-      address: vault?.address,
-      bankName: vault?.bankName,
-      accountNumber: vault?.accountNumber,
-    }),
-  );
+  const [breachItems] = useState(() => buildBreachItems(vault));
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-        <p className="text-sm uppercase tracking-[0.35em] text-purple-300/80">Mission 1 — Password Vault</p>
-        <h1 className="mt-3 text-4xl font-bold text-white">Learn Why It Happened</h1>
+        <p className="text-sm uppercase tracking-[0.35em] text-purple-300/80">Mission 3 — Password Vault</p>
+        <h1 className="mt-3 font-display text-4xl font-bold text-white">Learn Why It Happened</h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-400">
           Compare how a classical computer searches versus how a quantum algorithm approaches the same problem.
         </p>
@@ -82,11 +74,12 @@ function LearnWhy() {
             searchSpaceLabel={QUANTUM_SEARCH_SPACE_LABEL}
             timeLabel={quantumTime.label}
           />
-          <p className="mt-5 border-t border-slate-800 pt-4 text-xs italic leading-relaxed text-slate-500">
-            {GROVER_NOTE}
-          </p>
         </ComparisonPanel>
       </div>
+
+      <p className="mx-auto mt-6 max-w-2xl text-center text-xs italic leading-relaxed text-slate-500">
+        {GROVER_NOTE}
+      </p>
 
       <AnimatePresence>
         {breached && (
@@ -94,7 +87,7 @@ function LearnWhy() {
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="mt-8 rounded-2xl border border-red-500/50 bg-red-950/30 p-6"
+            className="mt-8 border-t-2 border-red-500/40 pt-6"
           >
             <p className="text-center text-xs uppercase tracking-[0.3em] text-red-400">Breach Report</p>
             <h2 className="mt-2 text-center text-2xl font-bold text-red-200">PASSWORD COMPROMISED</h2>
@@ -109,25 +102,15 @@ function LearnWhy() {
         )}
       </AnimatePresence>
 
-      <div className="mt-8 flex justify-center lg:justify-end">
-        <div className="w-full lg:max-w-md">
-          <KeyTakeaway points={KEY_TAKEAWAY_POINTS} />
-        </div>
+      <div className="mx-auto mt-8 max-w-2xl">
+        <KeyTakeaway points={KEY_TAKEAWAY_POINTS} />
       </div>
 
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+      <div className="mt-10 flex items-center justify-center">
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/mission/1')}
-          className="rounded-full bg-slate-800 px-6 py-3 text-slate-200 transition-colors hover:bg-slate-700"
-        >
-          Continue
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/mission/1/visualize')}
+          onClick={() => navigate('/mission/3/visualize')}
           className="rounded-full bg-purple-500 px-6 py-3 font-semibold text-white shadow-lg shadow-purple-500/30 transition-colors hover:bg-purple-400"
         >
           Next →
