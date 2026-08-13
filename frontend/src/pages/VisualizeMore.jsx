@@ -236,8 +236,8 @@ function VisualizeMore() {
                   <BlochSphereMini size="lg" />
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {QUBIT_SECTIONS.slice(3, 6).map((section) => (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {QUBIT_SECTIONS.slice(3, 5).map((section) => (
                     <InfoSection key={section.id} title={section.title}>
                       <p>{section.body}</p>
                     </InfoSection>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Zap } from 'lucide-react';
 import Panel from '../Panel';
+import QuantumDefinition from '../QuantumDefinition';
 
 const MIN_FACTOR = 2;
 const MAX_FACTOR = 9999;
@@ -102,8 +103,8 @@ function ShorsAlgorithm() {
         Multiplying two numbers together has exactly <span className="text-cyan-300">one answer</span>, computed
         directly. Going the other way — starting from the result and asking "what was multiplied to get this?" —
         has no shortcut: a classical computer has to guess candidate divisors <span className="text-cyan-300">one
-        at a time</span> until one fits. That gap between "easy forward, hard backward" is the entire lock RSA
-        encryption is built on.
+        at a time</span> until one fits. That gap between "easy forward, hard backward" is the entire lock{' '}
+        <QuantumDefinition term="rsa">RSA encryption</QuantumDefinition> is built on.
       </p>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -234,8 +235,11 @@ function ShorsAlgorithm() {
           >
             {status === 'quantum' ? (
               <p className="text-sm leading-relaxed text-slate-200">
-                <span className="font-semibold text-violet-300">Shor's algorithm found it immediately</span> —
-                it didn't guess divisors one at a time at all. Using quantum superposition, it finds the
+                <span className="font-semibold text-violet-300">
+                  <QuantumDefinition term="shorsAlgorithm">Shor's algorithm</QuantumDefinition> found it immediately
+                </span>{' '}
+                — it didn't guess divisors one at a time at all. Using quantum{' '}
+                <QuantumDefinition term="superposition">superposition</QuantumDefinition>, it finds the
                 <em> period</em> of a related function in one shot, and that period hands back the factors
                 directly. The classical search's runtime explodes as the number gets more digits; Shor's
                 runtime barely grows at all. That asymmetry is exactly why {formatNumber(product)} — and every
@@ -258,13 +262,16 @@ function ShorsAlgorithm() {
 
       <p className="mx-auto max-w-xl border-t border-white/[0.06] pt-4 text-center text-sm leading-relaxed text-slate-400">
         <span className="font-semibold text-white">Why this threatens encryption today: </span>
-        RSA encryption locks your data behind a huge number that's the product of two secret primes — secure only
-        because no classical computer can factor it back apart in a useful amount of time. A quantum computer
-        running <span className="text-violet-300">Shor's algorithm</span> doesn't get a small speed boost like
-        Grover's search does — it changes the problem from "impossibly slow" to "fast," collapsing what would take
-        longer than the age of the universe down to hours. That's why the push toward post-quantum, quantum-resistant
-        encryption exists: the moment a quantum computer is large enough to run Shor's algorithm on real key sizes,
-        today's RSA-protected data stops being safe.
+        <QuantumDefinition term="rsa">RSA encryption</QuantumDefinition> locks your data behind a huge number
+        that's the product of two secret primes — secure only because no classical computer can factor it back
+        apart in a useful amount of time. A quantum computer running{' '}
+        <span className="text-violet-300">
+          <QuantumDefinition term="shorsAlgorithm">Shor's algorithm</QuantumDefinition>
+        </span>{' '}
+        doesn't get a small speed boost like Grover's search does — it changes the problem from "impossibly slow"
+        to "fast," collapsing what would take longer than the age of the universe down to hours. That's why the
+        push toward post-quantum, quantum-resistant encryption exists: the moment a quantum computer is large
+        enough to run Shor's algorithm on real key sizes, today's RSA-protected data stops being safe.
       </p>
     </div>
   );

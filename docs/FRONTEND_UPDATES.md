@@ -1,5 +1,34 @@
 # Frontend & Integration Updates
 
+## 2026-07-29 — missions moved from a static frontend file into the database
+
+Closes a gap flagged in `docs/RESOURCES_PAGE.md` (2026-07-08): `db/schema.sql` already had
+`missions`/`mission_steps` tables when lessons were migrated off static JSON — lessons' DB migration
+was explicitly modeled on missions' pre-existing schema — but missions itself was never actually
+migrated. `server/app/api/missions.py` was a dead stub (hardcoded 4-mission Python list, never
+touching the DB) despite a full unused `Mission` SQLAlchemy model already existing.
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `db/schema.sql`                             | `missions.estimated_time` changed `INTEGER` → `VARCHAR` (display labels like "~1 min", not raw minutes); added `status` and `terminal_lines` (JSONB) columns |
+| `db/seed_missions.sql`                      | New — idempotent seed for the 5 current missions, safe to re-run                       |
+| `server/app/db/models.py`                   | `Mission` ORM updated to match the new columns                                         |
+| `server/app/api/missions.py`                | Replaced the hardcoded stub with real DB queries, mirroring `lessons.py`'s already-working pattern |
+| `frontend/src/data/missionsApi.js`          | New — `fetchMissions()`/`fetchMissionById()`, mirrors `lessonsApi.js`                   |
+| `frontend/src/data/missions.js`             | Stripped to just `STATUS_LABELS`; the hardcoded `MISSIONS` array is gone                |
+| `frontend/src/components/MissionGrid.jsx` / `frontend/src/pages/Mission.jsx` | Both now fetch on mount with the same loading/error pattern `Resources.jsx` already uses for lessons |
+
+The `MissionResponse` Pydantic model aliases the DB's snake_case columns to the frontend's existing
+camelCase contract (`description`→`summary`, `estimated_time`→`estimatedTime`, etc.), with an explicit
+`field_validator` to stringify the integer `mission_id` PK — verified in isolation that Pydantic's
+default lax mode does *not* auto-coerce int→str for a `str`-typed field before relying on it. Verified
+the response shape against a real ORM instance, confirmed the FastAPI app imports cleanly, and
+confirmed `npm run build` passes. The `ALTER TABLE`/seed SQL was handed to the user to run themselves
+against the live Supabase database via the SQL Editor (per `db/schema.sql`'s own convention) rather
+than executed automatically against production.
+
+---
+
 ## Summary of Changes
 
 ### Backend

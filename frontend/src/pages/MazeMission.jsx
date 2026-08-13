@@ -6,6 +6,7 @@ import QuantumCore from '../components/QuantumCore';
 import Panel from '../components/Panel';
 import SequentialLines from '../components/SequentialLines';
 import ProgressBar from '../components/ProgressBar';
+import QuantumDefinition from '../components/QuantumDefinition';
 import {
   MAZE_SIZE,
   TOTAL_CELLS,
@@ -24,7 +25,7 @@ import {
 const INTRO_LINES = [
   "> No map. Just a start, and an exit beacon you can already see through the fog.",
   "> Right now you're just you — one position, real walls, no shortcuts. Find the exit however you can.",
-  "> However many wrong turns it takes along the way, that's what a search costs when nothing's split in parallel.",
+  "> However many wrong turns it takes along the way, that's what a search costs when nothing's coexisting to reshape the odds.",
 ];
 
 const QUANTUM_INTRO_LINES = [
@@ -42,9 +43,9 @@ const KEY_TO_DIR = {
 
 const CONCEPT_MESSAGES = {
   superposition:
-    "> That junction just split your qubit — one branch per path forward, all exploring at once under the same shared controls. That's superposition: parallel exploration, not picking one way and hoping.",
-  decoherence:
-    "> A branch just hit a genuine dead end and locked in place — that outcome's probability just dropped to zero. It stays on the map as ground you covered; it just can't go anywhere from here.",
+    "> That junction just split your qubit — one branch per path forward, coexisting under the same shared controls. That's superposition: the paths all remain possible at once, not picked-one-and-hoping.",
+  deadend:
+    "> A branch just hit a genuine dead end and locked in place — that outcome's probability just dropped to zero. It stays on the map as ground you covered; it just can't go anywhere from here. (This isn't decoherence — that's when unwanted noise from the outside destroys the superposition by accident. This is the maze's own layout ruling a path out on purpose.)",
   measurement:
     "> One branch just reached the exit — that's the measurement. Every other branch collapses away, and the maze now replays that single lineage's path: the classical answer a measurement collapses down to.",
 };
@@ -395,16 +396,20 @@ function FinalResolutionScreen({ classicalResolution, quantumResolution, onRepla
         <p className="text-sm font-semibold text-cyan-300">How this actually works</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           Walking one corridor at a time and backtracking on dead ends is classical search — that's what your solo run
-          just was. Every junction in the quantum run instead split your qubit into one branch per path, all advancing{' '}
-          <em>simultaneously</em> under the same shared controls instead of one at a time — the same trick that lets
-          quantum walks explore a search space in parallel instead of serially.
+          just was. Every junction in the quantum run instead split your qubit into one branch per path, all
+          coexisting under the same shared controls — that's superposition. What actually finds the exit faster isn't
+          checking every branch in parallel; every dead end ruled out and every step forward reshapes the odds across
+          the branches that are left, the way Grover's oracle-and-diffusion rounds reshape amplitude, until the
+          branch heading toward the exit is the one left standing.
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-300">
-          Every mechanic in the quantum run — a junction splitting your qubit, a dead-end branch locking in place for
-          good, and the single branch that reached the exit collapsing every other branch away and replaying as one
-          classical path — is the same machinery behind quantum search, not just flavor text: superposition,
-          decoherence, and measurement. Mission 1 uses this exact same machinery to search millions of molecular
-          structures for a cure. This maze is the mechanism; that mission is the payoff.
+          A junction splitting your qubit is superposition, and the single branch reaching the exit and collapsing
+          every other branch away is measurement — the same machinery behind quantum search, not just flavor text.
+          What it isn't is decoherence: that's <QuantumDefinition term="decoherence">unwanted noise from the outside</QuantumDefinition>{' '}
+          wrecking the superposition by accident, the central problem standing between today's hardware and useful
+          quantum computers — not a step the algorithm performs on purpose, and not what a dead-end branch locking in
+          place was. Mission 1 uses this exact same machinery — superposition and interference, not decoherence — to
+          search millions of molecular structures for a cure. This maze is the mechanism; that mission is the payoff.
         </p>
         <StatRecap title="Solo Run" items={classicalStatItems} />
         <StatRecap title="Quantum Run" items={quantumStatItems} />
@@ -606,7 +611,7 @@ function MazeMission() {
     if (result.locks > 0) {
       nextConceptStats = { ...nextConceptStats, locks: nextConceptStats.locks + result.locks };
       setConceptStats(nextConceptStats);
-      announce('decoherence');
+      announce('deadend');
       setCoreStage('unstable');
       setTimeout(() => setCoreStage((s) => (s === 'unstable' ? 'alive' : s)), 1400);
     }

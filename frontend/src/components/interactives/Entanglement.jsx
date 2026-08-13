@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import Panel from '../Panel';
+import QuantumDefinition from '../QuantumDefinition';
 
 const TILT = (25 * Math.PI) / 180;
 const MINI_SIZE = 110;
@@ -142,12 +143,13 @@ function Entanglement() {
   return (
     <div className="space-y-6 text-center">
       <p className="mx-auto max-w-xl text-sm text-slate-400">
-        Each sphere below is its own qubit — move your mouse over one to set its odds of measuring 0 or 1;
-        it keeps that setting even after you move on to the next qubit, so you can shape several qubits
-        differently and see how they combine. The chart shows the odds of every possible combined outcome
-        across all qubits at once. Try the <span className="text-cyan-300">Entangle qubits</span> toggle to
-        see a combined outcome that hovering the qubits individually can never produce — that's the whole
-        point of entanglement.
+        Each sphere below is its own <QuantumDefinition term="qubit">qubit</QuantumDefinition> — move your mouse
+        over one to set its odds of measuring 0 or 1; it keeps that setting even after you move on to the next
+        qubit, so you can shape several qubits differently and see how they combine. The chart shows the odds of
+        every possible combined outcome across all qubits at once. Try the{' '}
+        <span className="text-cyan-300">Entangle qubits</span> toggle to see a combined outcome that hovering the
+        qubits individually can never produce — that's the whole point of{' '}
+        <QuantumDefinition term="entanglement">entanglement</QuantumDefinition>.
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-4">

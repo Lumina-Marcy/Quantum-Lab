@@ -1,5 +1,24 @@
 # App.jsx / Mission.jsx Fixes
 
+## 2026-07-29 — duplicate `PLAYABLE_ROUTES` from a merge (build failure #2)
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/Mission.jsx`            | Removed a duplicate `const PLAYABLE_ROUTES = {...}` — two declarations of the same identifier in the same scope, a hard `SyntaxError`, not the "unclosed JSX" shape of the original bug below but the same root cause: a merge kept both sides instead of reconciling them |
+| `frontend/src/App.jsx`                      | Added the missing `/mission/4/play` (`SupplyChainMission`) and `/mission/5/play` (`GovernmentFilesMission`) routes — both were already imported but never registered |
+| `frontend/src/components/MissionCard.jsx`   | Fixed `MISSION_ICONS`, still keyed to a pre-renumbering mission-id scheme (1=Password/Lock, 3=Molecule/Microscope) after `main` had separately renumbered missions to 1=Molecule, 2=Maze, 3=Password |
+
+Same failure mode as the original `App.jsx` bug documented below — a branch merge (`governmentFiles`
+PR #16 into `main`, which had independently renumbered missions 1–3 via a different branch first) left
+duplicate/inconsistent code instead of reconciled code. Confirmed via `npx vite build` reproducing the
+exact production error (`The symbol "PLAYABLE_ROUTES" has already been declared`), fixed all three
+issues, then scanned for leftover `<<<<<<<`/`=======`/`>>>>>>>` conflict markers and other stale
+mission-id references across the frontend (none found). This is now the second time a merge has broken
+this exact file via duplicated-not-reconciled code — worth a second look at merge conflict resolution
+in future PRs touching `Mission.jsx`/`App.jsx`.
+
+---
+
 ## Summary of Changes
 
 | Area                              | What changed                                                                                     |

@@ -51,8 +51,8 @@ const WALKTHROUGH_SLIDES = [
   },
   {
     kicker: 'How To Play — Step 4',
-    title: 'Quantum Simulation Takes Over',
-    body: 'After three unsuccessful attempts, Quantum Lab demonstrates quantum simulation exploring many possibilities simultaneously.',
+    title: "Quantum Search Takes Over",
+    body: "After three unsuccessful attempts, Quantum Lab runs Grover's algorithm — oracle-and-diffusion rounds that reshape the odds across every candidate until the cure rises to the top.",
   },
 ];
 
@@ -460,7 +460,7 @@ function SearchingPhase({ tried, onComplete, onProgress, target, targetScore }) 
       className="mx-auto max-w-4xl px-6 py-12"
     >
       <div className="mb-8 text-center">
-        <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Quantum Molecular Simulation</p>
+        <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/80">Quantum Molecular Search</p>
         <h2 className="mt-2 text-3xl font-bold text-white">Exploring Every Possibility At Once</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-400">
           The same <QuantumDefinition term="oracle" />-and-<QuantumDefinition term="diffusion" /> trick behind
@@ -599,10 +599,11 @@ function DebriefPhase({ onContinue, target, targetScore, targetName, attemptHist
 
       <div className="mt-10 border-t border-white/[0.06] pt-8">
         <p className="text-sm leading-relaxed text-slate-300">
-          Out of millions of possible molecular arrangements, quantum simulation identified one promising
-          candidate within seconds. This illustrates one of quantum computing's greatest strengths:
-          simulating molecular interactions that would take classical approaches dramatically longer to
-          evaluate.
+          Out of millions of possible molecular arrangements, Grover's algorithm found one promising
+          candidate within seconds — not by simulating any molecule's chemistry, but by using
+          oracle-and-diffusion rounds to reshape the odds across every candidate at once until the real
+          cure's probability rose to the top. (Directly simulating molecular behavior on a quantum
+          computer is a different technique entirely, one this mission doesn't use.)
         </p>
       </div>
 
@@ -625,7 +626,7 @@ function GroundingPhase({ onReplay }) {
     >
       <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Before You Go</p>
       <p className="mt-4 text-sm leading-relaxed text-slate-300">
-        Today's simulation was simplified for learning. In the real world, scientists explore
+        Today's search was simplified for learning. In the real world, scientists explore
         astronomical numbers of molecular possibilities. Quantum computing won't invent medicine on its
         own—but it may help researchers find promising candidates faster than ever before.
       </p>
@@ -686,7 +687,7 @@ function TransitionPhase({ attemptHistory, onComplete }) {
       className="mx-auto flex min-h-[calc(100vh-7rem)] max-w-xl flex-col items-center justify-center gap-6 px-6 py-10 text-center"
     >
       <p className="text-xs uppercase tracking-[0.3em] text-purple-300/80">Mission Control</p>
-      <h2 className="text-2xl font-bold text-white">Classical molecular simulation has reached practical limits.</h2>
+      <h2 className="text-2xl font-bold text-white">Testing candidates one at a time has reached practical limits.</h2>
 
       <div className="w-full space-y-3">
         {stats.slice(0, revealed).map((stat) => (
@@ -711,7 +712,7 @@ function TransitionPhase({ attemptHistory, onComplete }) {
             transition={{ duration: 0.5 }}
             className="text-sm text-purple-200"
           >
-            Quantum Core synchronized. Preparing simulation...
+            Quantum Core synchronized. Preparing search...
           </motion.p>
         )}
       </AnimatePresence>
@@ -740,7 +741,7 @@ function MoleculeMission() {
   const introLines = useMemo(() => buildIntroLines(focus), [focus]);
 
   // This mission never truly fails — classical attempts are scripted to fail so the quantum
-  // simulation has something to solve, and the search always lands on the target — so the Core's
+  // search has something to solve, and it always lands on the target — so the Core's
   // reactivity leans toward building excitement (blue pulse) with a deliberate red 'unstable' dip
   // during each classical failure, mirroring PasswordMission.jsx's established idiom.
   const [coreStage, setCoreStage] = useState('alive');
@@ -941,9 +942,9 @@ function MoleculeMission() {
                     <p className="mt-2 text-sm leading-relaxed text-slate-300">
                       Today's challenge is to discover a promising therapeutic molecule for {focus.disease}. Using
                       classical methods, scientists must test molecular combinations one at a time.{' '}
-                      <QuantumDefinition term="quantumComputer">Quantum computing</QuantumDefinition> offers the
-                      possibility of exploring countless molecular possibilities simultaneously — your objective is
-                      to experience the difference firsthand.
+                      <QuantumDefinition term="quantumComputer">Quantum computing</QuantumDefinition> offers a
+                      different approach: encode every candidate into one search space and let interference narrow
+                      it down — your objective is to experience the difference firsthand.
                     </p>
                     <div className="mt-5 flex justify-center">
                       <button
