@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import QuantumDefinition from '../QuantumDefinition';
 
 const TILT = (25 * Math.PI) / 180;
 const SIZE = 280;
@@ -49,6 +50,12 @@ function BlochSphere() {
 
   return (
     <div className="flex flex-col items-center gap-4">
+      <p className="mx-auto max-w-md text-center text-sm text-slate-400">
+        This <QuantumDefinition term="blochSphere">Bloch sphere</QuantumDefinition> visualizes a single{' '}
+        <QuantumDefinition term="qubit">qubit</QuantumDefinition>'s state. Move your mouse over it to place the
+        qubit in different <QuantumDefinition term="superposition">superpositions</QuantumDefinition> — the poles
+        are the two outcomes a <QuantumDefinition term="measurement">measurement</QuantumDefinition> can return.
+      </p>
       <div
         ref={containerRef}
         onMouseMove={handleMove}

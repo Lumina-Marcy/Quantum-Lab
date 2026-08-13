@@ -67,8 +67,8 @@ function ProbabilityVisual() {
   );
 }
 
-// Beat 5 — Why It Matters: every branch lit at once (all possibilities explored simultaneously),
-// deliberately contrasting Beat 1's single, rigidly-committed switch state.
+// Beat 5 — Why It Matters: every branch lit at once (the coexisting possibilities interference
+// reshapes), deliberately contrasting Beat 1's single, rigidly-committed switch state.
 const TREE_LAYERS = [
   [{ x: 100, y: 10 }],
   [{ x: 40, y: 60 }, { x: 100, y: 60 }, { x: 160, y: 60 }],
@@ -135,8 +135,8 @@ const BEATS = [
   },
   {
     kicker: 'Why It Matters',
-    title: 'That means exploring every path — simultaneously.',
-    copy: 'Problems too vast for classical computers become reachable.',
+    title: 'Rounds of interference steer that coexistence toward an answer.',
+    copy: "Not parallel checking — the wrong answers' odds get cancelled down while the right one's rises.",
     Visual: PossibilityTreeVisual,
   },
 ];

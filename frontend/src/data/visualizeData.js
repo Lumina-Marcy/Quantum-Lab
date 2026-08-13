@@ -69,7 +69,7 @@ export const QUBIT_SECTIONS = [
   {
     id: 'bit-vs-qubit',
     title: 'Classical Bit vs. Qubit',
-    body: 'A classical bit is always exactly 0 or 1. A qubit can be 0, 1, or — while unobserved — a blend of both at once, which lets quantum computers explore many combinations in parallel.',
+    body: "A classical bit is always exactly 0 or 1. A qubit can be 0, 1, or — while unobserved — a blend of both at once, which is the raw material interference-based algorithms reshape into an answer.",
   },
   {
     id: 'superposition',
@@ -85,11 +85,6 @@ export const QUBIT_SECTIONS = [
     id: 'why-matters',
     title: 'Why This Matters',
     body: 'Combining many qubits in superposition lets a quantum computer represent an enormous number of possibilities at once, which is the raw material algorithms like Grover\'s use to search faster.',
-  },
-  {
-    id: 'real-world',
-    title: 'Real World Example',
-    body: 'It\'s a bit like flipping a coin and covering it before it lands — while it\'s hidden, "heads" and "tails" are both still possible; lifting your hand to look is the measurement that forces one real answer.',
   },
 ];
 

@@ -454,3 +454,107 @@ bands instead of two hardcoded ones, so the layout scales automatically if the m
 again. Verified via a standalone check that all 15 photons land in non-overlapping bands and that the
 new max per-photon duration (2.4s) still stays under the stage's travel window (2.7s, bumped from
 2.2s) — otherwise a slow photon could still be mid-bounce when the stage cut to deciding.
+
+## 2026-07-29 — fixed a broken Render deploy (merge artifacts from the `governmentFiles` PR merge)
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/Mission.jsx`            | Removed a duplicate `const PLAYABLE_ROUTES` declaration — the build failed with `The symbol "PLAYABLE_ROUTES" has already been declared` |
+| `frontend/src/App.jsx`                      | Added the missing `/mission/4/play` and `/mission/5/play` routes                       |
+| `frontend/src/components/MissionCard.jsx`   | Fixed `MISSION_ICONS` — still keyed to the pre-renumbering mission ids                 |
+
+Merging the `governmentFiles` branch (PR #16) into `main` collided with an earlier, separate
+renumbering of missions 1–3 (Molecule=1, Maze=2, Password=3, done on `main` via a different branch
+in the meantime). The merge kept **both** branches' `PLAYABLE_ROUTES` declarations in `Mission.jsx`
+instead of reconciling them — a duplicate `const` in the same scope, which is a hard JS syntax error,
+not just a lint warning. `App.jsx` still imported `SupplyChainMission`/`GovernmentFilesMission` but
+never got their routes added in the merge, and `MissionCard.jsx`'s icon map wasn't updated for the new
+numbering (was still 1→Lock/3→Microscope instead of 1→Microscope/3→Lock). Reproduced the exact Docker
+build failure locally via `npm run build`, fixed all three, and scanned the repo for leftover
+`<<<<<<<`/`=======`/`>>>>>>>` conflict markers and other stale mission-id references (none found).
+Verified `npm run build` succeeds and the full FastAPI app imports cleanly.
+
+## 2026-07-29 — missions now live in the database instead of a static frontend file
+
+| Area                                             | What changed                                                                       |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `db/schema.sql`                                  | `missions` table: `estimated_time` changed from `INTEGER` to `VARCHAR` (display labels like "~1 min", not raw minutes), added `status` and `terminal_lines` (JSONB) columns |
+| `db/seed_missions.sql`                           | New — idempotent `INSERT ... ON CONFLICT DO UPDATE` seeding the 5 current missions, plus a `setval()` to keep future auto-generated ids from colliding |
+| `server/app/db/models.py`                        | `Mission` ORM model updated to match (`estimated_time` → `String`, added `status`/`terminal_lines`) |
+| `server/app/api/missions.py`                     | Replaced a hardcoded 4-mission stub with real DB queries (mirrors `lessons.py`'s pattern exactly) |
+| `frontend/src/data/missionsApi.js`               | New — `fetchMissions()`/`fetchMissionById()`, mirrors `lessonsApi.js`               |
+| `frontend/src/data/missions.js`                  | Stripped down to just `STATUS_LABELS`; the hardcoded `MISSIONS` array is gone       |
+| `frontend/src/components/MissionGrid.jsx`        | Now fetches on mount instead of importing the static array, with the same loading/error pattern as `Resources.jsx` |
+| `frontend/src/pages/Mission.jsx`                 | Same conversion — fetches the single mission by id instead of an in-memory `.find()` |
+
+This closes a gap flagged back in `docs/RESOURCES_PAGE.md` (2026-07-08): `db/schema.sql` already had
+`missions`/`mission_steps` tables — lessons' own DB migration was explicitly modeled on missions'
+pre-existing schema — but missions itself was never migrated off the static file. The `Mission`
+Pydantic response model aliases the DB's snake_case columns to the frontend's existing camelCase
+contract (`description`→`summary`, `estimated_time`→`estimatedTime`, etc.) with an explicit
+`field_validator` to stringify the integer `mission_id` — verified in isolation first that Pydantic's
+default lax mode does **not** auto-coerce int→str for a `str`-typed field (it raises `string_type`
+without this), so this wasn't a safe assumption to skip testing. Verified the full response shape
+against a real `Mission` ORM instance, confirmed the whole FastAPI app still imports, and confirmed
+`npm run build` passes with the new fetch-based components. The actual `ALTER TABLE`/seed SQL against
+the live (production) Supabase database was left for the user to run themselves via the SQL Editor,
+per `db/schema.sql`'s own established convention — not executed automatically against production.
+
+## 2026-07-29 — fixed two pre-existing crash bugs in the Maze mission
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/pages/MazeMission.jsx`        | Fixed a `useEffect` referencing `visited`/`resolution` — no such variables exist in this component (real state is `classicalVisited`/`quantumVisited`/`classicalResolution`/`quantumResolution`); also referenced phase names (`'walking'`, `'replaying'`) that don't exist in this component's actual phase enum |
+| `frontend/src/pages/MazeMission.jsx`        | Fixed `DirectionPad` spreading `{...hoverProps}` onto its buttons — `hoverProps` was never defined anywhere; now constructed from the (previously unused) `hoveredActionable` state and passed down as a prop |
+
+Both are leftovers from an earlier version of this component that was refactored into separate
+classical/quantum runs, with these two spots never updated to match — completely unrelated to any of
+this session's other work, and present since before this session started. Since ES modules are always
+strict mode, referencing an undeclared identifier throws a `ReferenceError` immediately: the first bug
+fired on every single render (crashing before the intro screen ever painted), and the second only
+fired once the walking phase actually mounted `DirectionPad` — which is why the first fix alone still
+"didn't work" from the user's perspective; it just uncovered the second, later crash. Diagnosed via a
+live-site console stack trace (`ReferenceError: hoverProps is not defined`) since this sandbox has no
+headless browser to reproduce it directly. After fixing both, wrote a standalone script using
+`@babel/parser`/`@babel/traverse` (already present transitively via Vite's toolchain) to scan for any
+identifier referenced but never bound in scope — confirmed zero remaining in this file, then ran the
+same check across every `.jsx` file in the frontend to confirm this bug pattern isn't lurking
+anywhere else. `npm run build` passes.
+
+## 2026-08-10 — corrected five quantum-concept inaccuracies in the missions/glossary copy
+
+| Area                                        | What changed                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `frontend/src/components/QuantumExplainer.jsx` | Homepage's "Why It Matters" beat no longer frames superposition as parallel computation ("exploring every path — simultaneously"); now names interference as the actual mechanism |
+| `frontend/src/pages/MazeMission.jsx`        | Same fix in the debrief's "How this actually works" copy; renamed the internal `decoherence` concept key to `deadend` (a dead-end branch locking in place isn't decoherence) and rewrote the debrief to correctly define decoherence — unwanted environmental noise destroying superposition, the field's central hardware obstacle — instead of listing it as search machinery, linking the glossary entry via `QuantumDefinition` |
+| `frontend/src/pages/MoleculeMission.jsx`    | Mission 1's copy called the Grover-style candidate search "quantum simulation" throughout (walkthrough slide, section kicker, debrief, transition header, briefing) — search and molecular simulation (VQE-style) are unrelated algorithms; reworded every instance to describe search consistently, matching the mission's actual oracle-and-diffusion mechanic |
+| `frontend/src/data/glossary.js`             | Qubit entry's "coin spinning in the air" metaphor replaced with a coin balanced on its edge (a spinning coin has a definite, just-unseen state — the opposite of superposition; this is IBM's own correction to the same metaphor) — also fixed the adjacent superposition entry, which contradicted the qubit entry one click over by claiming superposition lets algorithms "explore many answers in parallel" |
+| `frontend/src/data/visualizeData.js` / `frontend/src/pages/VisualizeMore.jsx` | Cut the Learn page's "coin covered before it lands" card (same hidden-definite-state problem as the coin-spinning metaphor) and fixed the same parallel-exploration phrasing in the qubit-vs-bit card; adjusted the now-5-item `QUBIT_SECTIONS` array's slice/grid layout |
+| `frontend/src/pages/PasswordMission.jsx`    | Mission 3's breach terminal said Grover's "tests every possible password at once," two screens before its own defense tooltip correctly explains the square-root speedup — reworded to state the speedup up front instead of contradicting it |
+| `frontend/src/pages/GovernmentFilesMission.jsx` | Mission 5's intro said QKD "makes silent interception impossible"; its own debrief already correctly reframes that as making interception impossible *to hide* — added those two words to the intro so it doesn't contradict itself |
+
+All five were factual/pedagogical corrections requested directly (not bugs turned up by testing): quantum
+speedups come from oracle-and-diffusion-style interference reshaping amplitude across a superposition, not
+from evaluating every branch in parallel — the parallel-computation framing is flagged as the field's most
+common misconception precisely because if it were true, Grover's algorithm would be exponentially faster
+than classical search instead of merely quadratically faster. Verified `npm run build` still passes after
+the edits.
+
+**Follow-up (2026-08-10):** user asked to make sure every mini-lesson (the `/resources` page's interactive
+components under `frontend/src/components/interactives/`) defines each concept it introduces, the same way
+`GroversAlgorithm.jsx`/`QuantumGates.jsx`/`Interference.jsx` already link terms through `QuantumDefinition`.
+Audited all 7 registered interactives (`frontend/src/components/interactives/index.js`) and found 4 with
+zero `QuantumDefinition` usage despite naming specialized concepts in their own copy:
+
+| Area                                              | What changed                                                                       |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `frontend/src/components/interactives/BlochSphere.jsx` | Had no explanatory text at all (just a mouse-move instruction) — added an intro paragraph defining Bloch sphere, qubit, superposition, and measurement |
+| `frontend/src/components/interactives/Entanglement.jsx` | Linked "qubit" and "entanglement" in its existing intro paragraph                     |
+| `frontend/src/components/interactives/WaveSuperposition.jsx` | Linked "qubit", "superposition", and "measuring" in its existing intro paragraph      |
+| `frontend/src/components/interactives/ShorsAlgorithm.jsx` | Linked "RSA encryption" and "superposition" (existing glossary terms); added a new `shorsAlgorithm` glossary entry (there wasn't one) and linked "Shor's algorithm" to it in both places it's named |
+| `frontend/src/data/glossary.js`                     | New `shorsAlgorithm` entry (`Divide` icon) — Shor's algorithm gets named throughout the app (this file, `rsa`/`privateKey`'s `moreInfo`) but never had its own definition |
+
+Left `qubit` mentions that recur many times per component (e.g. "single-qubit gate...acts on exactly one
+qubit") unlinked past the first, matching the existing convention in `GroversAlgorithm.jsx`/`QuantumGates.jsx`
+of linking a term's first, most load-bearing mention rather than every occurrence. Verified `npm run build`
+still passes.

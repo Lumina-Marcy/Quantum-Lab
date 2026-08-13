@@ -18,6 +18,7 @@ import {
   KeySquare,
   Key,
   LockKeyholeOpen,
+  Divide,
 } from 'lucide-react';
 
 // Shared across the whole app via `QuantumDefinition` — every entry gets an icon and a
@@ -26,13 +27,13 @@ export const GLOSSARY = {
   qubit: {
     term: 'Qubit',
     definition: 'The basic unit of quantum information — like a bit, but able to hold a blend of 0 and 1 until measured.',
-    moreInfo: 'A classical bit is a coin lying flat, always heads or tails. A qubit is that same coin spinning in the air — every angle of the spin is a valid state, and only looking at it (measuring) forces a definite heads or tails.',
+    moreInfo: "A classical bit is a coin lying flat, always heads or tails. A qubit is closer to that same coin balanced on its edge — not secretly leaning toward one side while you just can't see which, but genuinely poised between both until measuring it knocks it flat and forces a definite heads or tails.",
     icon: Atom,
   },
   superposition: {
     term: 'Superposition',
     definition: 'A quantum state representing multiple possibilities at once, each with its own probability.',
-    moreInfo: "It's not that the qubit is secretly one value and we just don't know which — the possibilities genuinely coexist until measurement, which is why quantum algorithms can explore many answers in parallel.",
+    moreInfo: "It's not that the qubit is secretly one value and we just don't know which — the possibilities genuinely coexist until measurement, which is what interference-based algorithms like Grover's manipulate: reshaping those coexisting odds round by round instead of checking each one in turn.",
     icon: Layers,
   },
   amplitude: {
@@ -118,6 +119,12 @@ export const GLOSSARY = {
     definition: 'One of the most widely used public-key encryption schemes, secure because factoring the huge number at its core is classically impractical.',
     moreInfo: "RSA is exactly what Shor's Algorithm targets: a quantum computer large enough to run it could factor an RSA key in hours instead of longer than the age of the universe — which is why RSA is being phased out in favor of quantum-resistant alternatives.",
     icon: KeySquare,
+  },
+  shorsAlgorithm: {
+    term: "Shor's Algorithm",
+    definition: 'A quantum algorithm that finds the prime factors of a large number by using superposition to find the period of a related function in one shot, instead of guessing divisors one at a time.',
+    moreInfo: "Unlike Grover's search, which only offers a quadratic speedup, Shor's turns factoring from effectively impossible into fast — the reason RSA encryption, which relies entirely on factoring being classically impractical, is being phased out in favor of quantum-resistant alternatives before large-scale quantum computers exist.",
+    icon: Divide,
   },
   quantumComputer: {
     term: 'Quantum Computer',

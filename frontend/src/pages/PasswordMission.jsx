@@ -20,7 +20,7 @@ import {
 const buildBreachLines = (username, email, assessment) => [
   {
     id: 1, delay: 400, text: '> Initializing Grover\'s Algorithm...', cls: 'text-green-400',
-    explain: 'A quantum search trick that tests every possible password at once, instead of guessing one at a time.',
+    explain: "A quantum search trick that reshapes the odds toward the real password through interference, needing only about its square root in guesses instead of one at a time.",
   },
   {
     id: 2, delay: 1400, text: `> Generating quantum superposition across 2^${assessment.entropyBits} password states...`, cls: 'text-green-400',

@@ -31,7 +31,7 @@ const INTRO_LINES = [
   { id: 2, delay: 1500, text: '> A classified intelligence report is queued for transmission...', cls: 'text-green-400' },
   { id: 3, delay: 2700, text: '> The report is encrypted, but the key has to be shared first', cls: 'text-yellow-300' },
   { id: 4, delay: 3900, text: '> A classical key can be copied in transit without anyone noticing...', cls: 'text-orange-400' },
-  { id: 5, delay: 5100, text: '> Quantum key distribution makes silent interception impossible', cls: 'text-green-400' },
+  { id: 5, delay: 5100, text: '> Quantum key distribution makes silent interception impossible to hide', cls: 'text-green-400' },
   { id: 6, delay: 6300, text: '█████████ SECURE CHANNEL READY — AWAITING TRANSMISSION █████████', cls: 'text-emerald-400 font-bold tracking-wider' },
 ];
 

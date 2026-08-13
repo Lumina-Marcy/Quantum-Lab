@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import QuantumDefinition from '../QuantumDefinition';
 
 const TILT = (25 * Math.PI) / 180;
 const MAIN_SIZE = 180;
@@ -133,10 +134,11 @@ function QuantumPanel() {
     <div className="text-center">
       <h3 className="text-lg font-semibold text-white">Superposition & Measurement</h3>
       <p className="mx-auto mt-2 max-w-lg text-sm text-slate-400">
-        Move your mouse over the sphere to put the qubit in different superpositions. Measuring it can
-        only ever return one of two outcomes, <span className="text-emerald-300">0</span> or{' '}
-        <span className="text-rose-300">1</span> — the two small spheres on the right show each outcome's
-        odds, updating live as you move.
+        Move your mouse over the sphere to put the <QuantumDefinition term="qubit">qubit</QuantumDefinition> in
+        different <QuantumDefinition term="superposition">superpositions</QuantumDefinition>.{' '}
+        <QuantumDefinition term="measurement">Measuring</QuantumDefinition> it can only ever return one of two
+        outcomes, <span className="text-emerald-300">0</span> or <span className="text-rose-300">1</span> — the
+        two small spheres on the right show each outcome's odds, updating live as you move.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
